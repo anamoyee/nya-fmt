@@ -1,18 +1,30 @@
 [project]
-name = 'nya-fmt'
-dynamic = ['version']
-description = 'A reincarnation of tcrutils.fmt_iterable that strives to be less buggy, less crashy (fail gracefully), as well as be more easily extensible and maintainable'
-readme = "README.md"
+name            = 'nya-fmt'
+dynamic         = ['version']
+description     = 'A reincarnation of tcrutils.fmt_iterable that strives to be less buggy, less crashy (fail gracefully), as well as be more easily extensible and maintainable'
+readme          = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+
+dependencies = [ #
+	"astpretty>=3.0.0",
+	"nya-result>=0.1.4",
+	"nya-scope>=0.2.1",
+	"rich>=15.0.0",
+]
 
 # [project.scripts]
 # nya_fmt = "nya_fmt.__main__:main"
 
 [build-system]
-requires = ["hatchling"]
+requires      = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "src/nya_fmt/_version.py"
+path    = "src/nya_fmt/_version.py"
 pattern = '__version__(?:: str)? *= *\"(?P<version>[^\"]+)\"'
+
+[dependency-groups]
+dev = [ #
+	"mypy>=1.20.0",
+	"pytest>=9.0.2",
+]
