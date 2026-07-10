@@ -72,6 +72,8 @@ class π_t:
 	Name comes from previous version of the library where the formatter was called print_iterable (and was often shortened to π in code due to it's long name).
 	"""
 
+	fmt: nf.Formatter
+
 	def __init__(self, fmt: nf.Formatter) -> None:
 		object.__setattr__(self, "fmt", fmt)
 
@@ -104,6 +106,21 @@ class π_t:
 		self[other]
 		return self
 
+	@staticmethod
+	def hr():
+		hr()
+
+	@staticmethod
+	def comment(s: str | type):
+		if isinstance(s, type):
+			s = s.__qualname__
+
+		rich.print(f"[bright_black]# {s!s}")
+
+	@staticmethod
+	def manual_parametrize[T](*values: T) -> Generator[T, None, None]:
+		return manual_parametrize(*values)
+
 
 @pytest.fixture
 def π(fmt: nf.Formatter) -> π_t:
@@ -114,7 +131,7 @@ def hr():
 	rich.print(f"[white b]{"-" * PRINT_HEADER_LAST_WIDTH_PRINTED}")
 
 
-def manual_parametrize(*values: object) -> Generator[object, None, None]:
+def manual_parametrize[T](*values: T) -> Generator[T, None, None]:
 	yielded_one = False
 
 	for value in values:

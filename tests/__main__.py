@@ -6,9 +6,11 @@ from nya_scope import Scope
 from .conftest import _print_header, π_t
 from .conftest import fmt as fmt_fixture
 from .conftest import π as π_fixture
+from .test_ast import test_ast
 from .test_bool import test_bool
 from .test_ellipsis import test_ellipsis
 from .test_iterable import test_nonhash_iterable, test_set
+from .test_none import test_none
 from .test_number import test_float, test_int
 
 if TYPE_CHECKING:
@@ -27,11 +29,13 @@ def main():
 
 	TESTS: list[Callable[[π_t], None]] = [
 		test_bool,
+		test_none,
 		test_ellipsis,
 		test_int,
 		test_float,
 		test_nonhash_iterable,
 		test_set,
+		test_ast,
 	]
 
 	for test_fn in TESTS:
