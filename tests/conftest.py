@@ -43,7 +43,7 @@ def _print_header(title: str, *, colored: bool = True) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _AUTOUSE_print_test_header(request) -> Generator[None]:
+def _AUTOUSE_print_test_header(request) -> None:
 	name = request.node.function.__name__
 
 	# if parametrized

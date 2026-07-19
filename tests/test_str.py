@@ -19,7 +19,6 @@ def test_str(π: π_t):
 
 	print()
 	π <<= "🐱"  # cat kitty cat cat kitty cat cat
-	# TODO: replace json with repr since this breaks cat emojis, and the resulting json-escaped string isnt even comparing equal
 
 
 def test_str_bbcode_NOT_rendered(π: π_t):
