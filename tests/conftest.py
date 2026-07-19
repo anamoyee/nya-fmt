@@ -1,3 +1,4 @@
+import re
 from collections.abc import Generator
 from typing import Self
 
@@ -74,23 +75,35 @@ class π_t:
 
 	fmt: nf.Formatter
 
+	align: str
+	"""The `str` format specifier, the `str(THIS)` of `π[THIS] = ...` or `π <<= THIS`, used for alignment purposes."""
+	sep: str
+	"""The separator between key and value in `π[KEY] = VALUE`, or `π <<= KEY = VALUE`. Defaults to `"="`."""
+
 	def __init__(self, fmt: nf.Formatter) -> None:
-		object.__setattr__(self, "fmt", fmt)
+		self.fmt = fmt
+		self.align = ""
+		self.sep = "="
 
 	def __call__(self, x: object) -> Self:
 		rich.print(self.fmt(x))
 		return self
 
 	def __setitem__(self, key: object, value: object) -> None:
+		sep = self.sep
+		str_key = str(key)
+
+		if match := re.search(r"(\s*(?:->|=>|==|=)\s*)$", str_key):
+			sep = str(match.group(1))
+			str_key = str_key[: -len(sep)]
+
 		display_as_kwarg = nf.displayers.DisplayAsKeywordArg(
-			str(key),
+			f"{str_key:{self.align}}",
 			value,
+			sep=sep,
 		)
 
 		rich.print(self.fmt(display_as_kwarg))
-
-	def __setattr__(self, key: str, value: object) -> None:
-		self[key] = value
 
 	def __getitem__(self, key: object) -> Self:
 		"""Equivalent of adding a !r to a fmt(...), had it supported it :whyyy:."""  # noqa: DOC201
@@ -118,8 +131,44 @@ class π_t:
 		rich.print(f"[bright_black]# {s!s}")
 
 	@staticmethod
-	def manual_parametrize[T](*values: T) -> Generator[T, None, None]:
+	def parametrize[T](*values: T) -> Generator[T, None, None]:
 		return manual_parametrize(*values)
+
+	def parametrize_providers(self, *providers: nf.providers.FormatProviderABC) -> Generator[nf.providers.FormatProviderABC, None, None]:
+		"""### Shortcut for the following piece of code.
+
+		```
+		for current_provider in (providers := (
+			...,
+			...,
+			...,
+		)):
+		    with self.fmt.with_tmp_settings():
+		        self.fmt.ensure_providers_missing(*providers)
+		        self.fmt.ensure_providers_present(current_provider)
+
+				... # your test here
+		```
+
+		### Use like so:
+		```
+		for _ in π.parametrize_providers( # optionally name the provider if you wish to use it in the test
+			...,
+			...,
+			...,
+		):
+			... # your test here
+
+		Yields:
+			nf.providers.FormatProviderABC: The current provider being tested.
+		"""  # ruff:ignore[mixed-spaces-and-tabs]
+
+		for current_provider in self.parametrize(*providers):
+			with self.fmt.with_tmp_settings():
+				self.fmt.ensure_providers_missing(*providers)
+				self.fmt.ensure_providers_present(current_provider)
+
+				yield current_provider
 
 
 @pytest.fixture

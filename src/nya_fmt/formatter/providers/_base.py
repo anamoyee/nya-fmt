@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 if TYPE_CHECKING:
 	from nya_result import Maybe
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 	from .._base import Formatter
 
 
-class FormatProviderABC[T](abc.ABC):
+class FormatProviderABC[_](abc.ABC): # removing this generic for some fucking reason breaks subclasses' generics with a hard error??? why the fuck i do not know
 	_default_providers: ClassVar[dict[int, list[type[Self]]]] = {}
 
 	@classmethod
@@ -32,4 +32,4 @@ class FormatProviderABC[T](abc.ABC):
 			cls._default_providers.setdefault(priority, []).insert(0, cls)  # type: ignore
 
 	@abc.abstractmethod
-	def try_fmt(self, v: T, /, *, fmt: Formatter) -> Maybe[Text]: ...
+	def try_fmt(self, v: Any, /, *, fmt: Formatter) -> Maybe[Text]: ...

@@ -1,8 +1,3 @@
-import pytest
-
-from .conftest import manual_parametrize
-
-
 def _convert[T: object, TypeInstance: object](value: tuple[T] | T, Type: type[TypeInstance]) -> TypeInstance | T:
 	"""Should be called `_tuple_to_Type_recursively()`, but that name is too cumbersome to use.
 
@@ -16,7 +11,7 @@ def _convert[T: object, TypeInstance: object](value: tuple[T] | T, Type: type[Ty
 
 
 def test_nonhash_iterable(π):
-	for Type, Type__display_name in manual_parametrize(
+	for Type, Type__display_name in π.parametrize(
 		(tuple, tuple.__name__),
 		(list, list.__name__),
 		(lambda xs: (x for x in xs), "generator"),  # generator
@@ -29,7 +24,7 @@ def test_nonhash_iterable(π):
 
 
 def test_set(π):
-	for Set in manual_parametrize(
+	for Set in π.parametrize(
 		set,
 		frozenset,
 	):

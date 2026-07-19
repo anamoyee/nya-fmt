@@ -16,3 +16,31 @@ def test_float(π):
 	π << -1.23e-4
 	π << 1.23e-8
 	π << -1.23e-8
+	print()
+	π << float("inf")
+	π << float("-inf")
+	π << float("nan")
+	π << float("-nan")
+
+
+def test_hexint(π):
+	from nya_fmt.formatter.types import HexInt
+
+	π << HexInt(0)
+	π << HexInt(255)
+	π << HexInt(255, leading_zeroes=4)
+	π << HexInt(255, leading_zeroes=2)
+	π << HexInt(255, leading_zeroes=0)
+	π << HexInt(255, leading_zeroes=-1)
+	π.hr()
+	π << HexInt(0x123456789ABCDEF0)
+	π << HexInt(0x123456789ABCDEF0).upcast_to_int()
+
+
+def test_unixtimestampint(π):
+	from nya_fmt.formatter.types import UnixTimestampInt
+
+	π << UnixTimestampInt(0)
+	π << UnixTimestampInt(1_000_000_000)
+	π << UnixTimestampInt(1_000_000_000_000)
+	π << UnixTimestampInt(1_000_000_000_000_000)

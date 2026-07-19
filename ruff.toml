@@ -71,7 +71,7 @@ extend-per-file-ignores = { "tests/**/*.py" = ["ANN"] }
 
 select = [
 	# commented-out code
-	"ERA001",
+	# "ERA001",
 
 	# FastAPI
 	"FAST",
@@ -96,7 +96,7 @@ select = [
 	"ANN003",
 	"ANN201",
 	"ANN202",
-	"ANN204",
+	# "ANN204",
 	"ANN205",
 	"ANN206",
 

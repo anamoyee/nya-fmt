@@ -27,4 +27,6 @@ pattern = '__version__(?:: str)? *= *\"(?P<version>[^\"]+)\"'
 dev = [ #
 	"mypy>=1.20.0",
 	"pytest>=9.0.2",
+	"tcrutils>=13.1.39",
+	"ty>=0.0.61",
 ]

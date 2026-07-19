@@ -1,0 +1,11 @@
+{
+	"configurations": [
+		{
+			"name": "Python: -m tests",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "tests",
+			"justMyCode": true
+		}
+	]
+}

@@ -18,13 +18,13 @@ class Styles:
 	keyword: Style            = field(default_factory=lambda: Style.parse("b #ee8d55"))
 	punctuation: Style        = field(default_factory=lambda: Style.parse("b white"))
 	string: Style             = field(default_factory=lambda: Style.parse("b yellow"))
-	number: Style             = field(default_factory=lambda: Style.parse("b blue"))
+	number: Style             = field(default_factory=lambda: Style.parse("b bright_blue"))
 	true: Style               = field(default_factory=lambda: Style.parse("b green"))
 	false: Style              = field(default_factory=lambda: Style.parse("b red"))
 	none: Style               = field(default_factory=lambda: Style.parse("b bright_black"))
 	comma: Style              = field(default_factory=lambda: Style.parse("not b cyan")) # ("b bright_black"))
 	bracket: Style            = field(default_factory=lambda: Style.parse("b cyan"))
-	type: Style               = field(default_factory=lambda: Style.parse("b blue"))
+	type: Style               = field(default_factory=lambda: Style.parse("b bright_blue"))
 	function: Style           = field(default_factory=lambda: Style.parse("b yellow"))
 	error: Style              = field(default_factory=lambda: Style.parse("not b red"))
 	module: Style             = field(default_factory=lambda: Style.parse("b orange1"))
@@ -33,8 +33,8 @@ class Styles:
 	guess: Style              = field(default_factory=lambda: Style.parse("b cyan"))
 	"""Used as a color for e.g. `?` (possibly other characters or multi-char indicators in the future) to signify that the further representation has been guessed, for example by `ast.parse`'ing a repr() result, and not rendered from source, structured data."""
 
-	letter_p_Path: Style      = field(default_factory=lambda: Style.parse("b blue"))
-	letter_F_frozenset: Style = field(default_factory=lambda: Style.parse("b blue"))
+	letter_p_Path: Style      = field(default_factory=lambda: Style.parse("b bright_blue"))
+	letter_F_frozenset: Style = field(default_factory=lambda: Style.parse("b bright_blue"))
 	# fmt: on
 
 	@classmethod
@@ -48,7 +48,8 @@ class Styles:
 @dataclass(kw_only=True)
 class Formatter:
 	styles: Styles = field(default_factory=Styles)
-	indent: str | None = " " * 2
+
+	indent: str | None = " " * 4
 	"""The indentation given to nested structures, e.g. lists, dicts, calls, ...other.
 
 	- For `indent=None`
@@ -94,18 +95,37 @@ class Formatter:
 		default_factory=lambda: tuple(m_providers.FormatProviderABC.iter_default_providers())
 	)
 
-	number_pos_char: str = ""
-	number_neg_char: str = "-"
-	number_decimal: str = "."
+	doublequotes_preference: bool | None = None
+	"""Whether to prefer double quotes over single quotes when formatting strings.
+
+	- `None`: (recommended) Same as python repr, but with preference to doublequotes over single quotes, which means it WILL use singlequotes if the string contains doublequotes, but not single quotes, which would make the string look less cluttered with less escaping.
+	- `True`: Always use double quotes, even if the string contains double quotes, which will require escaping them.
+	- `False`: Same behaviour as python built-in `repr()` (prefer single quotes, but use double quotes if the string contains single quotes and not double quotes).
+	- Sorry, no 'Always' option for singlequotes :c
+	"""
+	allow_triple_quotes_for_less_escaping: bool = False
+	"""Whether to allow triple quotes (including both: made out of `'''` and `\"""`) whenever this would lead to less escaping within the string content."""
+	allow_triple_quotes_for_newlines: bool = True
+	"""Whether to allow triple quotes (including both: made out of `'''` and `\"""`) whenever the string contains newlines. This also enabled tabs (`\\t`) to be expanded into `indent` within a string that contains newlines"""
 
 	prefer_short_name: bool = False
-	"""Whether to prefer `__qualname__` over `__name__` when displaying `type`s."""
+	"""Whether to prefer `__name__` over `__qualname__` when displaying `type`."""
 
 	no_quoteless_str: bool = False
 	"""Prevent the behaviour of displaying simple (non-space, non-special chars) strings without quotes."""
 
+	int_format_specifier: str = ""
+	"""f'{int_instance:{int_format_specifier}}' is used to format integers."""
 	float_format_specifier: str = "g"
 	"""f'{float_instance:{float_format_specifier}}' is used to format floats."""
+	float_use_infinity_symbol: bool = True
+	"""Whether to use the infinity symbol (∞) instead of 'inf' when formatting floats."""
+
+	date_format_specifier: str = "%Y-%m-%d"
+	"""f'{date_instance:{date_format_specifier}}' is used to format datetime.date."""
+
+	time_format_specifier: str = "%H:%M:%S"
+	"""f'{time_instance:{time_format_specifier}}' is used to format datetime.time."""
 
 	include_at_notation: bool = True
 	"""Whether to append stuff like @dataclass before dataclass objects."""
@@ -118,6 +138,21 @@ class Formatter:
 
 	include_guess_question_mark: bool = True
 	"""Whether to include the given notation: `Type?(guessed_repr_formatting)` instead of Type(guessed_repr_formatting) when the formatter has to guess the structure of an object based on its repr() output, if it is a valid python expression, parse it and syntax-highlight."""
+
+	rich_style_preview: str = "Preview"
+	"""Whether to format `rich.style.Style` with a preview, which's value is itself formatted with that style. To disable set this to `""`, any other value customizes the text."""
+
+	rich_text_preview: bool = True
+	"""Whether to format `rich.text.Text` with a preview of said text, within angle brackets."""
+
+	rich_text_preview_max_len: int = 20
+	"""The maximum length of the preview of `rich.text.Text` when `rich_text_preview` is `True`. If the text is longer than this, it will be truncated and a `(...)` will be added. Set to -1 to disable truncation (any other negative integer counts the same as -1)."""
+
+	align_dataclass_field_keys_if_all_values_of_same_type: bool = True
+	"""Whether to right-align the keys of dataclass fields if all values are of the same."""
+
+	dataclass_key_align_char: str = " "
+	"""The character to use for aligning dataclass field keys if `align_dataclass_field_keys_if_all_values_of_same_type` is `True`. This should be either len()=0 or len()=1, any other length will be truncated to 1 (thus characters as indices >=1 will have no effect). This is pasted directly (after aformentioned truncation) into the format specifier for the string key therefore a len()=0 string means align with str.__format__'s default (a space)."""
 
 	def add_indent(self, text: Text) -> Text:
 		if self.indent is None:
@@ -164,6 +199,21 @@ class Formatter:
 			for field_name, value in before.items():
 				setattr(self, field_name, value)
 
+	def ensure_providers_present(self, *providers: m_providers.FormatProviderABC) -> None:
+		"""Ensure that the given providers are present in the formatter's providers list. If any of the given providers are not present, append them."""
+		self.providers = (
+			*self.providers,
+			*(
+				provider  #
+				for provider in providers
+				if provider not in self.providers
+			),
+		)
+
+	def ensure_providers_missing(self, *providers: m_providers.FormatProviderABC) -> None:
+		"""Ensure that the given providers are not present in the formatter's providers list. If any of the given providers are present, remove them."""
+		self.providers = tuple(provider for provider in self.providers if provider not in providers)
+
 	if True:  # fh (fmt helper) methods
 		if True:  # canonical representations
 
@@ -178,6 +228,14 @@ class Formatter:
 			def _fh__colon(self) -> Text:
 				"""Return canonical stylizing of a colon (`:`)."""
 				return Text(":", style=self.styles.punctuation)
+
+			def _fh__dot(self) -> Text:
+				"""Return canonical stylizing of a dot (`.`)."""
+				return Text(".", style=self.styles.punctuation)
+
+			def _fh__ellipsis(self) -> Text:
+				"""Return canonical stylizing of an ellipsis (`...`)."""
+				return Text("...", style=self.styles.punctuation)
 
 			def _fh__guess_question_mark(self) -> Text:
 				"""Return canonical stylizing of a question mark (`?`) used for guessed representations."""
@@ -240,6 +298,14 @@ class Formatter:
 			"""
 			return Text("{", style=self.styles.bracket) + text + Text("}", style=self.styles.bracket)
 
+		def _fh__raw_in_angles(self, text: Text) -> Text:
+			"""Format a genericdef-like appearence with the given text, e.g. `<arg1, arg2, kw1=...>`, delegating formatting args and kwargs as to the caller (you have to evaluate them into a Text beforehand).
+
+			Returns:
+				text: The formatted representation of the dict.
+			"""
+			return Text("<", style=self.styles.bracket) + text + Text(">", style=self.styles.bracket)
+
 		def _fh__call(self, *args: object, **kwargs: object) -> Text:
 			"""Format a call with the given args and kwargs, e.g. `(arg1, arg2, kw1=...)`, foarmtting args and kwargs in the process.
 
@@ -259,8 +325,8 @@ class Formatter:
 		def _fh__call2(
 			self,
 			*,
-			args: object,
-			kwargs: object,
+			args: tuple[Any, ...],
+			kwargs: dict[str, Any],
 			prefix: Text = Text(),
 			suffix: Text = Text(),
 		) -> Text:
@@ -279,7 +345,7 @@ class Formatter:
 
 			return self(
 				self._fh__raw_in_parens(
-					"".join((
+					Text().join((
 						prefix,
 						self._fh__comma().join(
 							self(x)  #
@@ -292,3 +358,50 @@ class Formatter:
 					))
 				)
 			)
+
+		def _fh__add_indentlike_prefix(self, text: Text, *, prefix: Text) -> Text:
+			r"""Add a prefix to each line of the given text, splitting at '\n'.
+
+			Args:
+				text: The Text to which the prefix should be added.
+				prefix: The prefix to add to each line of the `text`.
+
+			Returns:
+				text: The formatted representation of the text with the prefix added to each line.
+			"""
+			return Text("\n").join(
+				prefix + line  #
+				for line in text.split("\n")
+			)
+
+		def _fh__spaceship_error_text(
+			self,
+			text: Text,
+		) -> Text:
+			"""Produce a multiline error-looking message for when a __nya_fmt__ method raises an exception, or further use in other cases.
+
+			```
+			this_but_highlighted_with_colors = '''
+			<[
+			 | Text of the error message
+			 | Can be multiline, no problem
+			 | It is recommended it's set to style=fmt.styles.error, though not required.
+			 ]>
+			'''[1:-1]
+			```
+
+			Returns:
+				text: The formatted representation of the error message that gave off spaceship energy at the time of naming this function for some reason...
+
+			"""  # ruff:ignore[mixed-spaces-and-tabs]
+
+			style_error_b = self.styles.error + Style(bold=True)
+
+			return Text("\n").join((
+				Text("<[", style=style_error_b),
+				self._fh__add_indentlike_prefix(
+					text,
+					prefix=Text(" | ", style=style_error_b),
+				),
+				Text(" ]>", style=style_error_b),
+			))
