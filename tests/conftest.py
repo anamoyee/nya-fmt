@@ -134,7 +134,10 @@ class π_t:
 	def parametrize[T](*values: T) -> Generator[T, None, None]:
 		return manual_parametrize(*values)
 
-	def parametrize_providers(self, *providers: nf.providers.FormatProviderABC) -> Generator[nf.providers.FormatProviderABC, None, None]:
+	def parametrize_providers(
+		self,
+		*providers: nf.providers.FormatProviderABC,
+	) -> Generator[nf.providers.FormatProviderABC, None, None]:
 		"""### Shortcut for the following piece of code.
 
 		```
@@ -165,7 +168,7 @@ class π_t:
 
 		for current_provider in self.parametrize(*providers):
 			with self.fmt.with_tmp_settings():
-				self.fmt.ensure_providers_missing(*providers)
+				self.fmt.ensure_provider_types_missing(*(type(provider) for provider in providers))
 				self.fmt.ensure_providers_present(current_provider)
 
 				yield current_provider

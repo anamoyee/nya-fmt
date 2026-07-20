@@ -26,3 +26,6 @@ def test_datetime(π):
 	print()
 	π["datetime.now   -1m -> "] = dt.datetime.now() + td_neg1m  # ruff:ignore[call-datetime-now-without-tzinfo]
 	π["datetime.now+tz-1m -> "] = dt.datetime.now(tz=TZ) + td_neg1m
+
+
+# todo: implement dt.timedelta (and display a Δ ?)

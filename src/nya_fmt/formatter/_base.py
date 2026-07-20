@@ -163,13 +163,13 @@ class Formatter:
 			for line in text.split("\n")
 		)
 
-	def __call__(self, __v: Any, /) -> Text:
+	def __call__(self, __v: object, /) -> Text:
 		return self.fmt(__v)
 
 	def __repr__(self) -> str:
 		return f"{self.__class__.__name__}()"
 
-	def fmt(self, v: Any, /) -> Text:
+	def fmt(self, v: object, /) -> Text:
 		for provider in self.providers:
 			result = provider.try_fmt(v, fmt=self)
 			if result.is_some:
@@ -200,19 +200,27 @@ class Formatter:
 				setattr(self, field_name, value)
 
 	def ensure_providers_present(self, *providers: m_providers.FormatProviderABC) -> None:
-		"""Ensure that the given providers are present in the formatter's providers list. If any of the given providers are not present, append them."""
+		"""Ensure that the given providers are present in the formatter's providers list. If any of the given providers are not present, append them.
+
+		Raises:
+			TypeError: If any of the given providers are classes instead of instances. This causes many bugs if is allowed into the `providers` tuple.
+		"""
+		if any(isinstance(provider, type) for provider in providers):
+			msg = "All providers must be instances, not classes. This causes many bugs if is allowed into the `providers` tuple."
+			raise TypeError(msg)
+
 		self.providers = (
-			*self.providers,
 			*(
 				provider  #
 				for provider in providers
 				if provider not in self.providers
 			),
+			*self.providers,
 		)
 
-	def ensure_providers_missing(self, *providers: m_providers.FormatProviderABC) -> None:
+	def ensure_provider_types_missing(self, *provider_types: type[m_providers.FormatProviderABC]) -> None:
 		"""Ensure that the given providers are not present in the formatter's providers list. If any of the given providers are present, remove them."""
-		self.providers = tuple(provider for provider in self.providers if provider not in providers)
+		self.providers = tuple(provider for provider in self.providers if not any(isinstance(provider, p_t) for p_t in provider_types))
 
 	if True:  # fh (fmt helper) methods
 		if True:  # canonical representations

@@ -22,20 +22,10 @@ class StringRepr:
 
 
 def test_ast(π: π_t):
-	for TestedProvider in π.parametrize(
-		*(
-			all_tested_providers := (
-				FP__ast__expr_VIA_unparse,
-				FP__ast__expr_VIA_dump,
-			)
-		)
+	for _ in π.parametrize_providers(
+		FP__ast__expr_VIA_unparse(),
+		FP__ast__expr_VIA_dump(),
 	):
-		with π.fmt.with_tmp_settings():
-			π.fmt.providers = (
-				*(provider for provider in π.fmt.providers if provider not in all_tested_providers),
-				TestedProvider,
-			)
+		π.comment(ast.Constant)
 
-			π.comment(ast.Constant)
-
-			π << parse_expr("1")
+		π << parse_expr("1")

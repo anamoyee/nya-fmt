@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import inspect
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, TypedDict, runtime_checkable
 
 from nya_result import Maybe
 from rich.style import Style
@@ -11,9 +13,13 @@ if TYPE_CHECKING:
 	from .._base import Formatter
 
 
+class NyaFmtMethodKwargs(TypedDict):
+	fmt: Formatter
+
+
 @runtime_checkable
 class NyaFmtTypingProtocol(Protocol):
-	def __nya_fmt__(self, *, fmt: "Formatter") -> Text: ...
+	def __nya_fmt__(self, *, fmt: Formatter) -> Text: ...
 
 
 class NyaFmtFP(FPABC, priority=100):
@@ -23,7 +29,7 @@ class NyaFmtFP(FPABC, priority=100):
 	def __init__(self) -> None:
 		self._ignored_ids: set[int] = set()
 
-	def _make_exception_occured_text(self, *, fmt: "Formatter", v: Any, e: BaseException) -> Text:
+	def _make_exception_occured_text(self, *, fmt: Formatter, v: NyaFmtTypingProtocol, e: BaseException) -> Text:
 		if fmt.debug_raise_exceptions:
 			e.add_note("Raising the exception as part of `Formatter.debug_raise_exceptions`.")
 			raise e
@@ -59,7 +65,7 @@ class NyaFmtFP(FPABC, priority=100):
 			))
 		)
 
-	def try_fmt(self, v: Any, /, *, fmt: "Formatter") -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
 		if not hasattr(self, "_ignored_ids"):
 			self._ignored_ids = set()
 
@@ -69,7 +75,7 @@ class NyaFmtFP(FPABC, priority=100):
 		if not isinstance(v, NyaFmtTypingProtocol):
 			return Maybe.new_none()
 
-		kwargs: dict[str, object] = dict(
+		kwargs: NyaFmtMethodKwargs = dict(
 			fmt=fmt,
 		)
 

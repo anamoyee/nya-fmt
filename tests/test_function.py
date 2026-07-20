@@ -1,14 +1,16 @@
 import nya_fmt as nf
 
+from .conftest import π_t
+
 
 def add_outer(x: int, y: int) -> int:
 	return x + y
 
 
-def test_function(π):
+def test_function(π: π_t):
 	for _ in π.parametrize_providers(
-		nf.providers.pystdlib.FP__types__FunctionType_VIA_module_path,
-		nf.providers.pystdlib.FP__types__FunctionType_VIA_def,
+		nf.providers.pystdlib.FP__types__FunctionType_VIA_module_path(),
+		nf.providers.pystdlib.FP__types__FunctionType_VIA_def(),
 	):
 
 		@π

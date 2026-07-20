@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -38,6 +39,8 @@ def main():
 			width=os.get_terminal_size().columns,
 		)
 
+	test_names_to_keep = tuple(f"test_{name}" for name in sys.argv[1:])
+
 	TESTS: list[CallableWithName[[π_t], None]] = [
 		test_bool,
 		test_none,
@@ -75,6 +78,9 @@ def main():
 		del __test_for_duplicates_set
 
 	for test_fn in TESTS:
+		if test_names_to_keep and test_fn.__name__ not in test_names_to_keep:
+			continue
+
 		if True:  # manually invoke the fixture functions to get π, assume they are per-function always
 			get_fmt: Callable[[], nf.Formatter] = fmt_fixture._get_wrapped_function()
 			get_π: Callable[[nf.Formatter], π_t] = π_fixture._get_wrapped_function()
