@@ -99,6 +99,11 @@ class Formatter:
 
 	debug_raise_exceptions: bool = False
 
+	# todo: performance optimization: turn providers into a dict[type, tuple[provider]], type should be the broadest type that this provider supports,
+	#       then the MRO of the type should be walked from the most specific to the least specific and the first provider from the list which accepts
+	#       should be given the job.
+	# todo: performance optimization: forgo Maybe type and instead return Text|None everywhere, instead of Maybe[Text], as i belive the creation of
+	#       Maybe objects to then immediately unwrap them is really shitty on the performace.
 	providers: tuple[m_providers.FormatProviderABC, ...] = field(
 		default_factory=lambda: tuple(m_providers.FormatProviderABC.iter_default_providers())
 	)
