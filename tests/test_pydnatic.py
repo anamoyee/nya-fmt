@@ -22,6 +22,11 @@ class Model(pydantic.BaseModel):
 	)
 	mod2: SmallModel = pydantic.Field(default_factory=SmallModel)
 
+	field_excluded: str = pydantic.Field(default="excluded", exclude=True)
+	field_no_repr: str = pydantic.Field(default="no_repr", repr=False)
+	field_excluded_no_repr: str = pydantic.Field(default="excluded_no_repr", exclude=True, repr=False)
+	field_exclude_if: str = pydantic.Field(default="exclude_if", exclude_if=lambda v: True)
+
 
 def test_model1(π: π_t):
 	for _ in π.parametrize_providers(

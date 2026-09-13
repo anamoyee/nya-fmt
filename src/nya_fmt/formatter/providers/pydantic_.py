@@ -9,6 +9,8 @@ from .. import displayers as displayers_m
 from ._base import FormatProviderABC as FPABC
 
 if TYPE_CHECKING:
+	import pydantic
+
 	from ._base import Formatter
 
 
@@ -44,6 +46,10 @@ class FP__pydantic__BaseModel_VIA_dict(FPABC, no_auto_register=True):
 		)
 
 
+def _UNSAFE_cast_to_model_fields(v) -> dict[str, pydantic.fields.FieldInfo]:  # ruff: ignore[missing-type-function-argument]
+	return v
+
+
 class FP__pydantic__BaseModel_VIA_dict_resolved(FPABC):
 	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
 		try:
@@ -61,8 +67,14 @@ class FP__pydantic__BaseModel_VIA_dict_resolved(FPABC):
 					Text("**", style=fmt.styles.operator)
 					+ fmt(
 						displayers_m.Len1MultilineDict({
-							k: getattr(v, k)  #
-							for k in type(v).model_fields
+							key: value  #
+							for key, field_info in _UNSAFE_cast_to_model_fields(type(v).model_fields).items()
+							if (value := getattr(v, key), None)[-1]
+							or all([
+								field_info.repr,
+								not field_info.exclude,
+								(field_info.exclude_if is None or not field_info.exclude_if(value)),
+							])
 						})
 					),
 				),
