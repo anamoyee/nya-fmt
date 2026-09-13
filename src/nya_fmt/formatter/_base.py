@@ -24,6 +24,7 @@ class Styles:
 	true                              :Style= field(default_factory=lambda: Style.parse("b green"))
 	false                             :Style= field(default_factory=lambda: Style.parse("b red"))
 	none                              :Style= field(default_factory=lambda: Style.parse("b bright_black"))
+	comment                           :Style= field(default_factory=lambda: Style.parse("b bright_black"))
 	comma                             :Style= field(default_factory=lambda: Style.parse("not b cyan")) # ("b bright_black"))
 	bracket                           :Style= field(default_factory=lambda: Style.parse("b cyan"))
 	type                              :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
@@ -163,6 +164,9 @@ class Formatter:
 
 	iterable_max_display_len: int = 100
 	"""The maximum number of items to display in an iterable, if the iterable is larger, ."""
+
+	pydantic_field_descriptions: bool = True
+	"""Whether to display a comment-style '# {field_info.description}' after pydantic model instance fields. Descriptions are a built-in, optional feature of pydantic."""
 
 	_inflight_stack: list[object] = field(default_factory=list, repr=True)
 	"""A list of objects that the next fmt() call will be canonically "providing" a subfomatting for.
@@ -364,7 +368,7 @@ class Formatter:
 			kwargs_display = [m_displayers.args.DisplayAsKeywordArg(key, value) for key, value in kwargs.items()]
 
 			return self(
-				m_displayers.iterable.CallFromTupleDisplay((
+				m_displayers.iterable.Len0NoCommaTuple((
 					*args,
 					*kwargs_display,
 				))

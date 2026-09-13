@@ -30,6 +30,7 @@ pattern = '__version__(?:: str)? *= *\"(?P<version>[^\"]+)\"'
 dev = [ #
 	"hikari==2.5.0",
 	"mypy==2.3.0",
+	"pydantic>=2.13.5",
 	"pytest==9.1.1",
 	"tcrutils==13.1.39",
 	"ty==0.0.69",

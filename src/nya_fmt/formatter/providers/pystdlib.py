@@ -131,6 +131,10 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 	def is_len1_comma_added(self) -> bool:
 		return False
 
+	@property
+	def is_len1_skipping_indent(self) -> bool:
+		return True
+
 	@abc.abstractmethod
 	def accept(self, v: object) -> TypeGuard[Iterable[object]]: ...
 
@@ -156,7 +160,7 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 
 		n_more: int | Literal["?"]
 		if len_v is None:
-			if self.iter_has_more_items(v_iter):  # ruff: ignore[if-else-block-instead-of-if-exp]
+			if self.iter_has_more_items(v_iter):
 				n_more = "?"
 			else:
 				n_more = 0
@@ -170,7 +174,7 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 		if len_v == 0:
 			return Maybe.new_some(opening + (comma if self.is_len0_comma_added else Text()) + closing)
 
-		if len_v == 1:
+		if self.is_len1_skipping_indent and len_v == 1:
 			return Maybe.new_some(opening + fmt(*v) + (comma if self.is_len1_comma_added else Text()) + closing)
 
 		newline_if_indent_not_none = Text("\n" if fmt.indent is not None else "")
@@ -238,7 +242,7 @@ class _FPABC__collections__Mapping(_FPABC__collections__Iterable, no_auto_regist
 		if len_v == 0:
 			return Maybe.new_some(opening + (comma if self.is_len0_comma_added else Text()) + closing)
 
-		if len_v == 1:
+		if self.is_len1_skipping_indent and len_v == 1:
 			return Maybe.new_some(
 				Text().join((
 					opening,
