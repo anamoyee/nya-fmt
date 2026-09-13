@@ -28,4 +28,6 @@ def test_datetime(π):
 	π["datetime.now+tz-1m -> "] = dt.datetime.now(tz=TZ) + td_neg1m
 
 
-# todo: implement dt.timedelta (and display a Δ ?)
+# todo: implement dt.timedelta (and distplay a Δ ?)
+
+# todo: implement display for timezone-aware datetimes with the +NNNN syntax

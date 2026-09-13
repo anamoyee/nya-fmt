@@ -8,9 +8,12 @@ requires-python = ">=3.12"
 dependencies = [ #
 	"astpretty>=3.0.0",
 	"nya-result>=0.1.4",
-	"nya-scope>=0.2.1",
+	"nya-scope>=0.3.1",
 	"rich>=15.0.0",
 ]
+
+[project.optional-dependencies]
+hikari = ["hikari>=2.5.0"]
 
 # [project.scripts]
 # nya_fmt = "nya_fmt.__main__:main"
@@ -25,8 +28,9 @@ pattern = '__version__(?:: str)? *= *\"(?P<version>[^\"]+)\"'
 
 [dependency-groups]
 dev = [ #
-	"mypy>=1.20.0",
-	"pytest>=9.0.2",
-	"tcrutils>=13.1.39",
-	"ty>=0.0.61",
+	"hikari==2.5.0",
+	"mypy==2.3.0",
+	"pytest==9.1.1",
+	"tcrutils==13.1.39",
+	"ty==0.0.69",
 ]

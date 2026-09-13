@@ -10,31 +10,38 @@ from rich.text import Text
 
 from . import displayers as m_displayers
 from . import providers as m_providers
+from . import types as types_m
 
 
 @dataclass(kw_only=True)
 class Styles:
 	# fmt: off
-	keyword: Style            = field(default_factory=lambda: Style.parse("b #ee8d55"))
-	punctuation: Style        = field(default_factory=lambda: Style.parse("b white"))
-	string: Style             = field(default_factory=lambda: Style.parse("b yellow"))
-	number: Style             = field(default_factory=lambda: Style.parse("b bright_blue"))
-	true: Style               = field(default_factory=lambda: Style.parse("b green"))
-	false: Style              = field(default_factory=lambda: Style.parse("b red"))
-	none: Style               = field(default_factory=lambda: Style.parse("b bright_black"))
-	comma: Style              = field(default_factory=lambda: Style.parse("not b cyan")) # ("b bright_black"))
-	bracket: Style            = field(default_factory=lambda: Style.parse("b cyan"))
-	type: Style               = field(default_factory=lambda: Style.parse("b bright_blue"))
-	function: Style           = field(default_factory=lambda: Style.parse("b yellow"))
-	error: Style              = field(default_factory=lambda: Style.parse("not b red"))
-	module: Style             = field(default_factory=lambda: Style.parse("b orange1"))
-	unknown_attribute: Style  = field(default_factory=lambda: Style.parse("b grey62"))
-	keyword_arg_name: Style   = field(default_factory=lambda: Style.parse("b grey78"))
-	guess: Style              = field(default_factory=lambda: Style.parse("b cyan"))
+	keyword                           :Style= field(default_factory=lambda: Style.parse("b #ee8d55"))
+	punctuation                       :Style= field(default_factory=lambda: Style.parse("b white"))
+	punctuation_muted                 :Style= field(default_factory=lambda: Style.parse("b bright_black"))
+	string                            :Style= field(default_factory=lambda: Style.parse("b yellow"))
+	number                            :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
+	true                              :Style= field(default_factory=lambda: Style.parse("b green"))
+	false                             :Style= field(default_factory=lambda: Style.parse("b red"))
+	none                              :Style= field(default_factory=lambda: Style.parse("b bright_black"))
+	comma                             :Style= field(default_factory=lambda: Style.parse("not b cyan")) # ("b bright_black"))
+	bracket                           :Style= field(default_factory=lambda: Style.parse("b cyan"))
+	type                              :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
+	function                          :Style= field(default_factory=lambda: Style.parse("b yellow"))
+	error                             :Style= field(default_factory=lambda: Style.parse("not b red"))
+	module                            :Style= field(default_factory=lambda: Style.parse("b orange1"))
+	unknown_attribute                 :Style= field(default_factory=lambda: Style.parse("b grey62"))
+	keyword_arg_name                  :Style= field(default_factory=lambda: Style.parse("b grey78"))
+	guess                             :Style= field(default_factory=lambda: Style.parse("b cyan"))
 	"""Used as a color for e.g. `?` (possibly other characters or multi-char indicators in the future) to signify that the further representation has been guessed, for example by `ast.parse`'ing a repr() result, and not rendered from source, structured data."""
+	operator                          :Style= field(default_factory=lambda: Style.parse("b #e89064"))
+	enum_member                       :Style= field(default_factory=lambda: Style.parse("b white"))
+	iterable_max_display_len_overflow :Style= field(default_factory=lambda: Style.parse("b purple"))
 
-	letter_p_Path: Style      = field(default_factory=lambda: Style.parse("b bright_blue"))
-	letter_F_frozenset: Style = field(default_factory=lambda: Style.parse("b bright_blue"))
+
+	letter_p_Path      :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
+	letter_F_frozenset :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
+	word_Meta_enum     :Style= field(default_factory=lambda: Style.parse("b purple"))
 	# fmt: on
 
 	@classmethod
@@ -114,9 +121,9 @@ class Formatter:
 	no_quoteless_str: bool = False
 	"""Prevent the behaviour of displaying simple (non-space, non-special chars) strings without quotes."""
 
-	int_format_specifier: str = ""
+	int_format_specifier: str = "d"
 	"""f'{int_instance:{int_format_specifier}}' is used to format integers."""
-	float_format_specifier: str = "g"
+	float_format_specifier: str = "z#"
 	"""f'{float_instance:{float_format_specifier}}' is used to format floats."""
 	float_use_infinity_symbol: bool = True
 	"""Whether to use the infinity symbol (∞) instead of 'inf' when formatting floats."""
@@ -154,6 +161,17 @@ class Formatter:
 	dataclass_key_align_char: str = " "
 	"""The character to use for aligning dataclass field keys if `align_dataclass_field_keys_if_all_values_of_same_type` is `True`. This should be either len()=0 or len()=1, any other length will be truncated to 1 (thus characters as indices >=1 will have no effect). This is pasted directly (after aformentioned truncation) into the format specifier for the string key therefore a len()=0 string means align with str.__format__'s default (a space)."""
 
+	iterable_max_display_len: int = 100
+	"""The maximum number of items to display in an iterable, if the iterable is larger, ."""
+
+	_inflight_stack: list[object] = field(default_factory=list, repr=True)
+	"""A list of objects that the next fmt() call will be canonically "providing" a subfomatting for.
+
+	Items may format themselves differently based on this variable, each fmt() the object to be formatted is appended to this list, and popped afterwards.
+	e.g. If you want to code the behaviour that ast nodes check for the parent node and decide if they need to wrap themselves in parentheses, you may check _inflight_stack[-2] for being an ast node that requires parenthesising
+	While you shouldn't modify this list in a custom format provider, you technically can.
+	"""
+
 	def add_indent(self, text: Text) -> Text:
 		if self.indent is None:
 			return text
@@ -170,11 +188,17 @@ class Formatter:
 		return f"{self.__class__.__name__}()"
 
 	def fmt(self, v: object, /) -> Text:
-		for provider in self.providers:
-			result = provider.try_fmt(v, fmt=self)
-			if result.is_some:
-				return result.unwrap()
+		if any(id(v) == id(item) for item in self._inflight_stack):
+			return self._fh__recursive_reference(v)
 
+		self._inflight_stack.append(v)
+		try:
+			for provider in self.providers:
+				result = provider.try_fmt(v, fmt=self)
+				if result.is_some:
+					return result.unwrap()
+		finally:
+			self._inflight_stack.pop()
 		msg = f"{self.__class__.__name__}.fmt is not implemented for type {v.__class__.__name__}"
 		raise NotImplementedError(msg)
 
@@ -220,6 +244,10 @@ class Formatter:
 
 	def ensure_provider_types_missing(self, *provider_types: type[m_providers.FormatProviderABC]) -> None:
 		"""Ensure that the given providers are not present in the formatter's providers list. If any of the given providers are present, remove them."""
+		# todo: this does not work if type(self) is provided - subclassing breaks this
+		# 1. replace type(self) with actual hardcoded self type, so subclasses dont do their own class, but rather the lowest class to remove
+		# 2. make this do an isinstance check and not  ... wait this is already done , well impl the above
+
 		self.providers = tuple(provider for provider in self.providers if not any(isinstance(provider, p_t) for p_t in provider_types))
 
 	if True:  # fh (fmt helper) methods
@@ -227,6 +255,7 @@ class Formatter:
 
 			def _fh__space(self) -> Text:
 				"""Return Text(" ") if redundant spaces are enabled, otherwise Text()."""
+				# todo: find occurences where this function could've been used in builtin format providers, but a string literal is, this is a problem because it breaks self.redundant_whitespace setting
 				return Text(" ") if self.redundant_whitespace else Text()
 
 			def _fh__comma(self) -> Text:
@@ -248,6 +277,17 @@ class Formatter:
 			def _fh__guess_question_mark(self) -> Text:
 				"""Return canonical stylizing of a question mark (`?`) used for guessed representations."""
 				return Text("?", style=self.styles.guess) if self.include_guess_question_mark else Text()
+
+		def _fh__recursive_reference(self, v: object) -> Text:
+			"""Return a canonical representation of a recursive reference, e.g. `<Recursive reference to Foo instance at 0x7f8c9c8c8c8c>`."""
+
+			return Text().join((
+				Text("<Recursive reference to ", style=self.styles.error),
+				self(type(v)),
+				Text(" instance at ", style=self.styles.error),
+				self(types_m.HexInt(id(v), leading_zeroes=0)),
+				Text(">", style=self.styles.error),
+			))
 
 		def _fh__get_partial_name_of_type(self, v: type | FunctionType) -> str:
 			"""Return the `__name__` or `__qualname__` of the type `v`."""
@@ -286,7 +326,7 @@ class Formatter:
 			"""Format a call-like appearence with the given text, e.g. `(arg1, arg2, kw1=...)`, delegating formatting args and kwargs as to the caller (you have to evaluate them into a Text beforehand).
 
 			Returns:
-				text: The formatted representation of the call. This does not include the callable identifier (append it if you need it, e.g. `fmt(type(v)) + fmt._fh__call(...)`).
+				text: The formatted representation of the call. This does not include the callable identifier (append it if you need it, e.g. `fmt(type(v)) + fmt._fh__raw_in_parens(...)`).
 			"""
 			return Text("(", style=self.styles.bracket) + text + Text(")", style=self.styles.bracket)
 
@@ -294,7 +334,7 @@ class Formatter:
 			"""Format a list/getattr-like appearence with the given text, e.g. `[arg1, arg2, kw1=...]`, delegating formatting args and kwargs as to the caller (you have to evaluate them into a Text beforehand).
 
 			Returns:
-				text: The formatted representation of the list. If you meant to display a getattr, add the identifier manually (append it via `fmt(type(v)) + fmt._fh__call(...)`).
+				text: The formatted representation of the list. If you meant to display a getattr, add the identifier manually (append it via `fmt(type(v)) + fmt._fh__raw_in_brackets(...)`).
 			"""
 			return Text("[", style=self.styles.bracket) + text + Text("]", style=self.styles.bracket)
 
@@ -310,7 +350,7 @@ class Formatter:
 			"""Format a genericdef-like appearence with the given text, e.g. `<arg1, arg2, kw1=...>`, delegating formatting args and kwargs as to the caller (you have to evaluate them into a Text beforehand).
 
 			Returns:
-				text: The formatted representation of the dict.
+				text: The formatted representation of the genericdef.
 			"""
 			return Text("<", style=self.styles.bracket) + text + Text(">", style=self.styles.bracket)
 

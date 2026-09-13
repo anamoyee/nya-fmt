@@ -76,13 +76,13 @@ def test_str_escapes(π: π_t):
 		π
 		<< """Test pre-dedented docstring. This will not work (doctsring first line directly after opening triple quotes) on an indented docstring as it is checking for a \\n\\n.
 
-Args:
-	shitass (ból): shitass is a boolean that indicates whether the function should be shitass or not. If shitass is True, the function will be shitass. If shitass is False, the function will not be shitass.
+	Args:
+		shitass (ból): shitass is a boolean that indicates whether the function should be shitass or not. If shitass is True, the function will be shitass. If shitass is False, the function will not be shitass.
 
-Returns:
-	nothing (Literal['']): absolutely fucking nothing (also known as `{#|}`)
+	Returns:
+		nothing (Literal['']): absolutely fucking nothing (also known as `{#|}`)
 
-Raises:
-	ass
+	Raises:
+		ass
 """[:-1]
 	)

@@ -113,5 +113,7 @@ class NyaFmtFP(FPABC, priority=100):
 				raise TypeError(msg)  # ruff:ignore[raise-within-try]
 			return Maybe.new_some(maybe_text)
 		except Exception as e:
-			e.add_note("This exception was raised while trying to format an object using its __nya_fmt__ method.")
+			e.add_note(
+				f"This exception was raised while trying to format an object using its __nya_fmt__ method.\n   {v.__class__.__name__!r} ({id(v)=})"
+			)
 			return Maybe.new_some(self._make_exception_occured_text(fmt=fmt, v=v, e=e))

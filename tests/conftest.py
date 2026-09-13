@@ -128,7 +128,7 @@ class π_t:
 		if isinstance(s, type):
 			s = s.__qualname__
 
-		rich.print(f"[bright_black]# {s!s}")
+		rich.print(f"\n[bright_black]# {s}")
 
 	@staticmethod
 	def parametrize[T](*values: T) -> Generator[T, None, None]:

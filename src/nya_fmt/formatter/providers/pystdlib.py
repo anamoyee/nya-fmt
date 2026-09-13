@@ -3,22 +3,34 @@ from __future__ import annotations
 import abc
 import ast
 import datetime as dt
+import enum
 import inspect
+import itertools as it
 import re
 from ast import Call
-from collections.abc import Generator, Iterable, Mapping, MutableMapping
+from collections.abc import Generator, Iterable, Iterator, Mapping, MutableMapping
 from math import isinf, isnan
 from pathlib import Path, PurePath
 from types import EllipsisType, FunctionType, ModuleType
-from typing import TYPE_CHECKING, Any, TypeAliasType, TypeGuard, assert_never
+from typing import TYPE_CHECKING, Any, Literal, TypeAliasType, TypeGuard, assert_never
 
+import astpretty
 from nya_result import Maybe
 from rich.text import Text
 
+from ..displayers.raw import DisplayRawText
+from . import _util
 from ._base import FormatProviderABC as FPABC
 
 if TYPE_CHECKING:
 	from .._base import Formatter
+
+try:
+	import hikari.internal.enums
+except ImportError:
+	hikari_available = False
+else:
+	hikari_available = True
 
 
 class FP__builtins__bool(FPABC):
@@ -89,7 +101,9 @@ class FP__builtins__float(FPABC):
 		return Maybe.new_some(text)
 
 
-class FP__pathlib__PurePath(FPABC):
+class FP__pathlib__PurePath(
+	FPABC
+):  # todo: Make it look like `eza` colored formatting (e.g. aqua for dirs, red for broken symlinks, maybe reuse same color for non existent paths, or maybe use gray for nonexistent idk, etc.)
 	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
 		if not isinstance(v, PurePath):
 			return Maybe.new_none()
@@ -120,15 +134,34 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 	@abc.abstractmethod
 	def accept(self, v: object) -> TypeGuard[Iterable[object]]: ...
 
+	def iter_has_more_items(self, v: Iterator[object], /) -> bool:
+		try:
+			next(iter(v))
+		except StopIteration:
+			return False
+		else:
+			return True
+
 	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
 		if not self.accept(v):
 			return Maybe.new_none()
 
 		try:
-			len_v = len(v)  # type: ignore
+			len_v: int | None = len(v)  # type: ignore
 		except TypeError:
-			v = list(v)
-			len_v = len(v)
+			len_v = None
+
+		v_iter = iter(v)
+		v_isliced_list = list(it.islice(v_iter, fmt.iterable_max_display_len))
+
+		n_more: int | Literal["?"]
+		if len_v is None:
+			if self.iter_has_more_items(v_iter):  # ruff: ignore[if-else-block-instead-of-if-exp]
+				n_more = "?"
+			else:
+				n_more = 0
+		else:
+			n_more = len_v - len(v_isliced_list)
 
 		opening, closing = self.brackets(fmt=fmt)
 
@@ -149,8 +182,22 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 				opening,
 				newline_if_indent_not_none,
 				(comma + newline_if_indent_not_none + space_if_indent_none).join(
-					fmt.add_indent(fmt(x))  #
-					for x in v
+					fmt.add_indent(x)  #
+					for x in it.chain(
+						(fmt(v_item) for v_item in v_isliced_list),
+						(
+							(
+								Text().join((
+									Text("*", style=fmt.styles.operator),
+									fmt._fh__raw_in_parens(
+										Text(f"<{n_more} more...>", style=fmt.styles.iterable_max_display_len_overflow),
+									),
+								)),
+							)
+							if n_more != 0
+							else ()
+						),
+					)
 				),
 				comma_if_indent_not_none,
 				newline_if_indent_not_none,
@@ -192,7 +239,17 @@ class _FPABC__collections__Mapping(_FPABC__collections__Iterable, no_auto_regist
 			return Maybe.new_some(opening + (comma if self.is_len0_comma_added else Text()) + closing)
 
 		if len_v == 1:
-			return Maybe.new_some(opening + fmt(*v) + (comma if self.is_len1_comma_added else Text()) + closing)
+			return Maybe.new_some(
+				Text().join((
+					opening,
+					fmt(*v.keys()),
+					fmt._fh__colon(),
+					fmt._fh__space(),
+					fmt(*v.values()),
+					(comma if self.is_len1_comma_added else Text()),
+					closing,
+				))
+			)
 
 		newline_if_indent_not_none = Text("\n" if fmt.indent is not None else "")
 		space_if_indent_none = Text(" " if fmt.indent is None else "")
@@ -203,8 +260,26 @@ class _FPABC__collections__Mapping(_FPABC__collections__Iterable, no_auto_regist
 				opening,
 				newline_if_indent_not_none,
 				(comma + newline_if_indent_not_none + space_if_indent_none).join(
-					fmt.add_indent(fmt(k) + self.colon(fmt=fmt) + " " + fmt(v))  #
-					for k, v in v.items()
+					fmt.add_indent(x)  #
+					for x in it.chain(
+						it.islice(
+							(
+								fmt(k) + self.colon(fmt=fmt) + " " + fmt(v)  #
+								for k, v in v.items()
+							),
+							fmt.iterable_max_display_len,
+						),
+						(
+							Text().join((
+								Text("**", style=fmt.styles.operator),  #
+								fmt._fh__raw_in_parens(
+									Text(f"<{len(v) - (fmt.iterable_max_display_len)} more...>", style=fmt.styles.iterable_max_display_len_overflow),
+								),
+							)),
+						)
+						if len(v) > fmt.iterable_max_display_len
+						else (),
+					)
 				),
 				comma_if_indent_not_none,
 				newline_if_indent_not_none,
@@ -334,53 +409,305 @@ class FP__builtins__Ellipsis(FPABC):
 
 
 class FP__ast__expr_VIA_unparse(FPABC, no_auto_register=True):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
-		if not isinstance(v, ast.expr):
-			return Maybe.new_none()
+	def _format_ast_arguments_as_call(self, args: ast.arguments, *, fmt: Formatter) -> Text:
+		return Text("<ast.argumments>")  # todo: impl
 
+	def _impl_comprehension_body(self, el: ast.expr | tuple[ast.expr, ast.expr], /, *generators: ast.comprehension, fmt: Formatter) -> Text:
+		if isinstance(el, tuple):
+			el_k, el_v = el
+			fmted_el = fmt(el_k) + fmt._fh__colon() + fmt._fh__space() + fmt(el_v)
+		else:
+			fmted_el = fmt(el)
+
+		return Text().join((
+			fmted_el,
+			*(
+				Text().join((
+					Text(" "),
+					Text("async for" if gen.is_async else "for", style=fmt.styles.keyword),
+					Text(" "),
+					fmt(gen.target),
+					Text(" "),
+					Text("in", style=fmt.styles.keyword),
+					Text(" "),
+					fmt(gen.iter),
+					*(
+						Text().join((
+							Text(" "),
+							Text("if", style=fmt.styles.keyword),
+							Text(" "),
+							fmt(if_),
+						))
+						for if_ in gen.ifs
+					),
+				))
+				for gen in generators
+			),
+		))
+
+	def _impl(self, v: ast.expr, *, fmt: Formatter) -> Text:
 		match v:
 			case ast.Constant(value=value):
-				return Maybe.new_some(fmt(value))
+				return fmt(value)
 			case ast.Call(func=name, args=args, keywords=keywords):
 				kwargs = {keyword.arg or "": keyword.value for keyword in keywords}
-				return Maybe.new_some(fmt(name) + fmt._fh__call(*args, **kwargs))
+				return fmt(name) + fmt._fh__call(*args, **kwargs)
 			case ast.Name(id=id):
-				return Maybe.new_some(Text(id, style=fmt.styles.unknown_attribute))
+				return Text(id, style=fmt.styles.unknown_attribute)
 			case ast.Attribute(value=target, attr=attr):
-				return Maybe.new_some(
-					# todo: later, we can try to detect stuff like ALL_UPPERCASE and try to interpret as an enum.
-					fmt(target) + Text(".", style=fmt.styles.punctuation) + Text(attr, style=fmt.styles.unknown_attribute),
-				)
+				# todo: later, we can try to detect stuff like ALL_UPPERCASE and try to interpret as an enum.
+				return fmt(target) + Text(".", style=fmt.styles.punctuation) + Text(attr, style=fmt.styles.unknown_attribute)
 			case ast.Set(elts=xs):
-				return Maybe.new_some(
-					fmt._fh__raw_in_curlys(
-						(fmt._fh__comma() + fmt._fh__space()).join(
-							fmt(x)  #
-							for x in xs
-						)
+				return fmt._fh__raw_in_curlys(
+					(fmt._fh__comma() + fmt._fh__space()).join(
+						fmt(x)  #
+						for x in xs
 					)
 				)
 			case ast.Subscript(value=target, slice=slice_):
-				return Maybe.new_some(fmt(target) + Text("[", style=fmt.styles.bracket) + fmt(slice_) + Text("]", style=fmt.styles.bracket))
+				return fmt(target) + Text("[", style=fmt.styles.bracket) + fmt(slice_) + Text("]", style=fmt.styles.bracket)
 			case ast.Dict(keys=keys, values=values):
-				pairs = dict(zip(keys, values, strict=True))
+				return fmt._fh__raw_in_curlys(
+					(fmt._fh__comma() + fmt._fh__space()).join(
+						Text().join((
+							Text("**", style=fmt.styles.operator),
+							fmt(v),
+						))
+						if k is None
+						else Text().join((
+							fmt(k),
+							fmt._fh__colon(),
+							fmt._fh__space(),
+							fmt(v),
+						))
+						for k, v in zip(keys, values, strict=True)
+					),
+				)
+			case ast.List(elts=elements):
+				return fmt(elements)
+			case ast.Tuple(elts=elements):
+				return fmt(tuple(elements))
+			case ast.UnaryOp(op=op, operand=operand):
+				op_str = _util.isinstance_getitem(
+					{
+						ast.Not: "not",
+						ast.UAdd: "+",
+						ast.USub: "-",
+						ast.Invert: "~",
+					},
+					op,
+				)
 
-				return Maybe.new_some(fmt(pairs))
+				match op:
+					case ast.Not():
+						text = Text().join((
+							Text(op_str, style=fmt.styles.operator),
+							Text(" "),
+							fmt(operand),
+						))
 
+						match fmt._inflight_stack:
+							case [*_, ast.UnaryOp(op=ast.Not()), _]:
+								pass  # do not apply parens to `not not x` (as in NO: `not (not x)`)
+							case [*_, ast.UnaryOp() | ast.BinOp(), _]:
+								text = fmt._fh__raw_in_parens(text)
+
+						return text
+					case ast.UAdd() | ast.USub() | ast.Invert():
+						return Text(op_str, style=fmt.styles.operator) + fmt(operand)
+					case _:
+						try:
+							assert_never(v)  # type: ignore
+						except AssertionError as e:
+							e.add_note(f"{v=!r}")
+							raise
+
+			case ast.BinOp(left=lhs, op=op, right=rhs):
+				op_str = _util.isinstance_getitem(
+					{
+						ast.Add: "+",
+						ast.Sub: "-",
+						ast.Mult: "*",
+						ast.Div: "/",
+						ast.FloorDiv: "//",
+						ast.Mod: "%",
+						ast.Pow: "**",
+						ast.LShift: "<<",
+						ast.RShift: ">>",
+						ast.BitOr: "|",
+						ast.BitXor: "^",
+						ast.BitAnd: "&",
+					},
+					op,
+				)
+
+				return fmt(lhs) + fmt._fh__space() + Text(op_str, style=fmt.styles.operator) + fmt._fh__space() + fmt(rhs)
+			case ast.BoolOp(op=op, values=values):
+				match values:
+					case [] | [_]:
+						msg = "BoolOp with only one or zero values is invalid"
+						raise AssertionError(msg)
+
+				op_str = _util.isinstance_getitem(
+					{
+						ast.And: "and",
+						ast.Or: "or",
+					},
+					op,
+				)
+
+				return (Text(f" {op_str} ", style=fmt.styles.operator)).join(fmt(value) for value in values)
+			case ast.NamedExpr(target=target, value=value):
+				return fmt._fh__raw_in_parens(
+					Text().join((
+						fmt(target),
+						Text(" := ", style=fmt.styles.operator),
+						fmt(value),
+					))
+				)
+			case ast.Lambda(args=args, body=body):
+				return fmt._fh__raw_in_parens(
+					Text().join((
+						Text("lambda", style=fmt.styles.keyword),
+						fmt._fh__colon(),
+						fmt._fh__space(),
+						self._format_ast_arguments_as_call(args, fmt=fmt),
+						fmt._fh__colon(),
+						fmt._fh__space(),
+						fmt(body),
+					))
+				)
+			case ast.IfExp(test=test, body=body, orelse=orelse):
+				return fmt._fh__raw_in_parens(
+					Text().join((
+						fmt(body),
+						fmt._fh__space(),
+						Text("if", style=fmt.styles.keyword),
+						fmt._fh__space(),
+						fmt(test),
+						fmt._fh__space(),
+						Text("else", style=fmt.styles.keyword),
+						fmt._fh__space(),
+						fmt(orelse),
+					))
+				)
+			case (
+				ast.ListComp(elt=el, generators=generators)
+				| ast.SetComp(elt=el, generators=generators)
+				| ast.GeneratorExp(elt=el, generators=generators)
+			):
+				wrap_in_brackets_fn = _util.isinstance_getitem(
+					{
+						ast.ListComp: fmt._fh__raw_in_brackets,
+						ast.SetComp: fmt._fh__raw_in_curlys,
+						ast.GeneratorExp: fmt._fh__raw_in_parens,
+					},
+					v,
+				)
+
+				return wrap_in_brackets_fn(self._impl_comprehension_body(el, *generators, fmt=fmt))
+			case ast.DictComp(key=key, value=value, generators=generators):
+				return fmt._fh__raw_in_curlys(
+					self._impl_comprehension_body((key, value), *generators, fmt=fmt),
+				)
+			case ast.Await(value):
+				return fmt._fh__raw_in_parens(
+					Text("await ", style=fmt.styles.keyword) + fmt(value),
+				)
+			case ast.Yield(value):
+				if value is None:
+					return fmt._fh__raw_in_parens(
+						Text("yield", style=fmt.styles.keyword),
+					)
+
+				return fmt._fh__raw_in_parens(
+					Text("yield ", style=fmt.styles.keyword) + fmt(value),
+				)
+			case ast.YieldFrom(value):
+				return fmt._fh__raw_in_parens(
+					Text("yield from ", style=fmt.styles.keyword) + fmt(value),
+				)
+			case ast.Compare(left=lhs, ops=ops, comparators=comparators):
+				if len(ops) != len(comparators):
+					msg = "Compare node has different number of ops and comparators"
+					raise AssertionError(msg)
+
+				return fmt._fh__raw_in_parens(
+					Text().join((
+						fmt(lhs),
+						*(
+							(
+								Text().join((
+									fmt._fh__space(),  #
+									Text(
+										_util.isinstance_getitem(
+											{
+												ast.Eq: "==",
+												ast.NotEq: "!=",
+												ast.Lt: "<",
+												ast.LtE: "<=",
+												ast.Gt: ">",
+												ast.GtE: ">=",
+												ast.Is: "is",
+												ast.IsNot: "is not",
+												ast.In: "in",
+												ast.NotIn: "not in",
+											},
+											op,
+										),
+										style=fmt.styles.operator,
+									),
+									fmt._fh__space(),
+									fmt(comparator),
+								))
+							)
+							for op, comparator in zip(ops, comparators, strict=True)
+						),
+					))
+				)
+			case ast.Slice(lower=lower, upper=upper, step=step):
+				return fmt(slice(lower, upper, step))
+			# case ast.JoinedStr(values):
+			# 	msg_0 = "JoinedStr formatting is not implemented yet"
+			# 	raise NotImplementedError(msg_0)
+			case ast.Starred(value):
+				return Text("*", style=fmt.styles.operator) + fmt(value)
 			case _:
 				try:
-					assert_never(v)  # type: ignore # todo: implement all ast.expr cases. AND REMOVE THIS TYPE IGNORE when impleneting/implemented
+					assert_never(v)  # type: ignore # todo: implement all cases, do not remove this assert_never as this guards againast new features in the new python versions + this type: ignore actually is required as mypy/ty is not that smart
 				except AssertionError as e:
 					e.add_note(f"{v=!r}")
 					raise
 
-
-class FP__ast__expr_VIA_dump(FPABC):
 	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
 		if not isinstance(v, ast.expr):
 			return Maybe.new_none()
 
-		return Maybe.new_some(Text(ast.dump(v, indent=4), style=fmt.styles.error))
+		text = self._impl(v, fmt=fmt)
+		return Maybe.new_some(text)
+
+
+class FP__ast__expr_VIA_astpretty_into_unparse(FPABC):
+	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+		if not isinstance(v, ast.expr):
+			return Maybe.new_none()
+
+		with fmt.with_tmp_settings():
+			fmt.ensure_provider_types_missing(type(self))
+			fmt.ensure_providers_present(FP__ast__expr_VIA_unparse())
+
+			return Maybe.new_some(
+				fmt(
+					ast.parse(
+						astpretty.pformat(
+							v,
+							indent=4,
+							show_offsets=False,
+						),
+						mode="eval",
+					).body
+				)
+			)
 
 
 class FP__builtins__object(FPABC, priority=-1000):
@@ -425,14 +752,11 @@ class FP__builtins__object(FPABC, priority=-1000):
 					kwargs = {keyword.arg or "": keyword.value for keyword in keywords}
 
 					with fmt.with_tmp_settings():
-						if FP__ast__expr_VIA_unparse not in fmt.providers:
-							fmt.providers = (FP__ast__expr_VIA_unparse(), *fmt.providers)
-
-						return Text("?", style=fmt.styles.guess) + fmt._fh__call(*args, **kwargs)
+						fmt.ensure_providers_present(FP__ast__expr_VIA_unparse())
+						return fmt._fh__guess_question_mark() + fmt._fh__call(*args, **kwargs)
 
 			with fmt.with_tmp_settings():
-				if FP__ast__expr_VIA_unparse not in fmt.providers:
-					fmt.providers = (FP__ast__expr_VIA_unparse(), *fmt.providers)
+				fmt.ensure_providers_present(FP__ast__expr_VIA_unparse())
 				repr_v_text = fmt(expr)
 		elif (name := fmt._fh__get_partial_name_of_type(v.__class__)) and repr_v.startswith(f"{name}(") and repr_v.endswith(")"):
 			middle = repr_v[len(name) + 1 : -1]
@@ -441,7 +765,7 @@ class FP__builtins__object(FPABC, priority=-1000):
 			repr_v_text = Text(repr_v, style="reset")
 
 		return Text().join((
-			Text("?", style=fmt.styles.guess),
+			fmt._fh__guess_question_mark(),
 			fmt._fh__raw_in_parens(
 				repr_v_text,
 			),
@@ -626,11 +950,15 @@ class FP__builtins__str(FPABC):
 
 		if "\n" in content:
 			output_text = Text().join((
-				output_text,
+				Text("textwrap", fmt.styles.type),
 				fmt._fh__dot(),
-				Text("_dedent", fmt.styles.function),
-				fmt._fh__call(),
-				fmt._fh__raw_in_brackets(fmt(newline_compensation_slice)),
+				Text("dedent", fmt.styles.function),
+				fmt._fh__raw_in_parens(
+					Text().join((
+						output_text,
+						fmt._fh__raw_in_brackets(fmt(newline_compensation_slice)),
+					))
+				),
 			))
 
 		return Maybe.new_some(output_text)
@@ -644,7 +972,7 @@ class FP__builtins__BaseException(FPABC):
 		return Maybe.new_some(fmt(type(v)) + fmt._fh__call(*v.args))
 
 
-class FP__dataclasses__dataclass(FPABC):
+class FP__dataclasses__dataclass(FPABC):  # todo: implement attrs & attr in a simillar way
 	@staticmethod
 	def all_same_type(iterable: Iterable) -> bool:
 		iterator = iter(iterable)
@@ -660,7 +988,11 @@ class FP__dataclasses__dataclass(FPABC):
 		if not hasattr(v, "__dataclass_fields__"):
 			return Maybe.new_none()
 
-		fields: dict[str, Any] = v.__dataclass_fields__  # ty:ignore[invalid-assignment]
+		fields: dict[str, Any] = {
+			_f_name: _f_value  #
+			for _f_name, _f_value in v.__dataclass_fields__.items()  # ty: ignore[unresolved-attribute]
+			if getattr(_f_value, "repr", True)
+		}
 
 		with fmt.with_tmp_settings():
 			fmt.prefer_short_name = True
@@ -829,10 +1161,27 @@ class FP__builtins__slice(FPABC):
 		if not isinstance(v, slice):
 			return Maybe.new_none()
 
-		disambiguation_parens_required = not all(
-			isinstance(x, int | None)  #
-			for x in (v.start, v.stop, v.step)
-		)
+		if any(isinstance(fp, FP__ast__expr_VIA_unparse) for fp in fmt.providers):
+			slice_d = {"start": v.start, "stop": v.stop, "step": v.step}
+			match v.start:
+				case ast.Constant(value=None):
+					slice_d["start"] = None
+			match v.stop:
+				case ast.Constant(value=None):
+					slice_d["stop"] = None
+			match v.step:
+				case ast.Constant(value=None):
+					slice_d["step"] = None
+			v = slice(slice_d["start"], slice_d["stop"], slice_d["step"])
+
+		disambiguation_parens_required = True
+		match (v.start, v.stop, v.step):
+			case (
+				int() | None | ast.Constant(value=int()),
+				int() | None | ast.Constant(value=int()),
+				int() | None | ast.Constant(value=int()),
+			):
+				disambiguation_parens_required = False
 
 		left_colon = False
 		right_colon = False
@@ -864,3 +1213,120 @@ class FP__builtins__slice(FPABC):
 			text = fmt._fh__raw_in_parens(text)
 
 		return Maybe.new_some(text)
+
+
+class FP__enum__Enum(FPABC, priority=10):
+	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+		if not (
+			(
+				hikari_available
+				and (
+					isinstance(v, hikari.internal.enums.Enum)  #  # ruff: ignore[duplicate-isinstance-call]
+					or isinstance(v, hikari.internal.enums.Flag)
+				)
+			)  #
+			or isinstance(v, enum.Enum)
+		):
+			return Maybe.new_none()
+
+		progression_found = FP__enum__typeof_Enum.has_any_progression(v.__class__)
+
+		v_name_text = Text(v.name, style=fmt.styles.enum_member)
+		v_name_text.highlight_words(["|"], style=fmt.styles.punctuation_muted)
+
+		with fmt.with_tmp_settings():
+			fmt.ensure_provider_types_missing(FP__enum__typeof_Enum)
+			fmted_v_class_without_typeof_Enum_fp = fmt(v.__class__)
+
+		return Maybe.new_some(
+			Text().join((
+				fmted_v_class_without_typeof_Enum_fp,
+				Text(".", style=fmt.styles.punctuation_muted),
+				v_name_text,
+				*(
+					()
+					if progression_found
+					else (
+						Text(": ", style=fmt.styles.punctuation_muted),
+						fmt(v.value),
+					)
+				),
+			))
+		)
+
+
+class FP__enum__typeof_Enum(FPABC, priority=10):
+	@staticmethod
+	def has_linear_progression(v_t: type[enum.Enum], /, *, start: int) -> bool:
+		try:
+			for i, v_item in enumerate(v_t, start=start):
+				if i != v_item.value:
+					return False
+		except Exception:
+			return False
+
+		return True
+
+	@staticmethod
+	def has_geometric_progression(v_t: type[enum.Enum], /, *, start: int) -> bool:
+		try:
+			i = start
+			for v_item in v_t:
+				if v_item.value != i:
+					return False
+
+				if i == 0:
+					i = 1
+				else:
+					i *= 2
+		except Exception:
+			return False
+
+		return True
+
+	@staticmethod
+	def has_any_progression(v_t: type[enum.Enum], /) -> bool:
+		return (
+			FP__enum__typeof_Enum.has_linear_progression(v_t, start=0)  #
+			or FP__enum__typeof_Enum.has_linear_progression(v_t, start=1)
+			or FP__enum__typeof_Enum.has_geometric_progression(v_t, start=0)
+			or FP__enum__typeof_Enum.has_geometric_progression(v_t, start=1)
+		)
+
+	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+		if not (
+			(
+				hikari_available
+				and isinstance(v, type)
+				and (
+					issubclass(v, hikari.internal.enums.Enum)  #
+					or issubclass(v, hikari.internal.enums.Flag)
+				)
+			)  #
+			or (isinstance(v, type) and issubclass(v, enum.Enum))
+		):
+			return Maybe.new_none()
+
+		with fmt.with_tmp_settings():
+			fmt.ensure_provider_types_missing(type(self))
+			fmted_v_without_self_fp = fmt(v)
+
+		progression_detected = FP__enum__typeof_Enum.has_any_progression(v)
+
+		return Maybe.new_some(
+			Text().join((
+				fmted_v_without_self_fp,
+				Text("Meta", style=fmt.styles.word_Meta_enum),
+				fmt._fh__call(
+					{
+						DisplayRawText(Text(x.name, style=fmt.styles.enum_member))  #
+						for x in v
+					}
+					if progression_detected
+					else {
+						DisplayRawText(Text(x.name, style=fmt.styles.enum_member)): x.value  #
+						for x in v
+					}
+				),
+			))
+		)
