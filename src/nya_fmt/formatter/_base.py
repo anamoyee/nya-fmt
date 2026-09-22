@@ -140,7 +140,7 @@ class Formatter:
 	time_format_specifier: str = "%H:%M:%S"
 	"""f'{time_instance:{time_format_specifier}}' is used to format datetime.time."""
 
-	include_at_notation: bool = True
+	include_at_notation: bool = False
 	"""Whether to append stuff like @dataclass before dataclass objects."""
 
 	include_memory_addresses_in_unknown_objects: bool = True
