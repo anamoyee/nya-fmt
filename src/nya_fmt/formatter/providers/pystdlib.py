@@ -92,11 +92,7 @@ class FP__builtins__float(FPABC):
 		text.highlight_words(".+-eE", fmt.styles.punctuation)
 
 		if isnan(v) or isinf(v):
-			with fmt.with_tmp_settings():
-				fmt.prefer_short_name = True
-				type_text = fmt(type(v))
-
-			return Maybe.new_some(type_text + fmt._fh__raw_in_parens(text))
+			return Maybe.new_some(fmt._fh__identifier_type(v.__class__.__name__) + fmt._fh__raw_in_parens(text))
 
 		return Maybe.new_some(text)
 
@@ -208,6 +204,10 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 				closing,
 			))
 		)
+
+
+# todo: add support for dict_keys
+# todo: add support for dict_values
 
 
 class _FPABC__collections__Mapping(_FPABC__collections__Iterable, no_auto_register=True):
@@ -1048,11 +1048,9 @@ class FP__types__ModuleType(FPABC):
 			fmt.indent = None
 
 			return Maybe.new_some(
-				fmt(ModuleType)
-				+ fmt._fh__call(
-					v.__name__,
-					**kwargs,
-				)
+				fmt(ModuleType)  #
+				+ fmt._fh__raw_in_angles(fmt._fh__identifier_module(v.__name__))
+				+ fmt._fh__call(**kwargs)
 			)
 
 
@@ -1313,6 +1311,9 @@ class FP__enum__typeof_Enum(FPABC, priority=10):
 
 		with fmt.with_tmp_settings():
 			fmt.ensure_provider_types_missing(type(self))
+			if v in fmt._inflight_stack:
+				fmt._inflight_stack.remove(v)
+				# safely remove from "recursion detected", because this format provider is ensured missing - it will never happen again this formatting
 			fmted_v_without_self_fp = fmt(v)
 
 		progression_detected = FP__enum__typeof_Enum.has_any_progression(v)

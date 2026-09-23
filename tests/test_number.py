@@ -59,6 +59,8 @@ def test_unixtimestampint(π: π_t):
 	from nya_fmt.formatter.types import UnixTimestampInt
 
 	π << UnixTimestampInt(0)
+	π << UnixTimestampInt(1_000_000)
 	π << UnixTimestampInt(1_000_000_000)
 	π << UnixTimestampInt(1_000_000_000_000)
 	π << UnixTimestampInt(1_000_000_000_000_000)
+	π << UnixTimestampInt(1_000_000_000_000_000_000)

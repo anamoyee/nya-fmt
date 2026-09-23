@@ -12,9 +12,6 @@ dependencies = [ #
 	"rich>=15.0.0",
 ]
 
-[project.optional-dependencies]
-hikari = ["hikari>=2.5.0"]
-
 # [project.scripts]
 # nya_fmt = "nya_fmt.__main__:main"
 
@@ -34,7 +31,7 @@ dev = [ #
 	"pydantic>=2.13.5",
 	"pytest==9.1.1",
 	"tcrutils==13.1.39",
-	"ty==0.0.80",
+	"ty==0.0.83",
 ]
 
 [tool.uv.sources]

@@ -30,7 +30,7 @@ class Styles:
 	type                              :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
 	function                          :Style= field(default_factory=lambda: Style.parse("b yellow"))
 	error                             :Style= field(default_factory=lambda: Style.parse("not b red"))
-	module                            :Style= field(default_factory=lambda: Style.parse("b orange1"))
+	module                            :Style= field(default_factory=lambda: Style.parse("b bright_blue"))
 	unknown_attribute                 :Style= field(default_factory=lambda: Style.parse("b grey62"))
 	keyword_arg_name                  :Style= field(default_factory=lambda: Style.parse("b grey78"))
 	guess                             :Style= field(default_factory=lambda: Style.parse("b cyan"))
@@ -226,11 +226,14 @@ class Formatter:
 	def with_tmp_settings(self) -> Generator[None, None, None]:
 		before = {field_name: getattr(self, field_name) for field_name in self.__dataclass_fields__}
 
+		inflight_stack_before = self._inflight_stack[:]
+
 		try:
 			yield
 		finally:
 			for field_name, value in before.items():
 				setattr(self, field_name, value)
+			self._inflight_stack = inflight_stack_before
 
 	def ensure_providers_present(self, *providers: m_providers.FormatProviderABC) -> None:
 		"""Ensure that the given providers are present in the formatter's providers list. If any of the given providers are not present, append them.
@@ -462,3 +465,18 @@ class Formatter:
 				),
 				Text(" ]>", style=style_error_b),
 			))
+
+		def _fh__identifier_function(self, identifier: str) -> Text:
+			"""Return a formatted identifier with a color representing a function."""
+
+			return Text(identifier, style=self.styles.function)
+
+		def _fh__identifier_type(self, identifier: str) -> Text:
+			"""Return a formatted identifier with a color representing a type."""
+
+			return Text(identifier, style=self.styles.type)
+
+		def _fh__identifier_module(self, identifier: str) -> Text:
+			"""Return a formatted identifier with a color representing a module."""
+
+			return Text(identifier, style=self.styles.module)

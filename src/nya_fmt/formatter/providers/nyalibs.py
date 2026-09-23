@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 	from .._base import Formatter
 
 
-class FP__nya_result___ResultBase(FPABC):
+class FP__nya_result___ResultBase(FPABC, priority=-10):
 	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
 		if not isinstance(v, _ResultBase):
 			return Maybe.new_none()

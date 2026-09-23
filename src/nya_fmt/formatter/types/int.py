@@ -6,7 +6,7 @@ from rich.text import Text
 from .._base import Formatter
 
 
-class _Int(int):
+class _IntWithAlteredFormatting(int):
 	def upcast_to_int(self) -> int:
 		"""Forget that this int is a unix timestamp, it will now display as any other number in `nya_fmt` formatters.
 
@@ -16,7 +16,7 @@ class _Int(int):
 		return int(self)
 
 
-class UnixTimestampInt(_Int):
+class UnixTimestampInt(_IntWithAlteredFormatting):
 	"""Display this int like a datetime.datetime object when formatting (interpret the value as a [unix timestamp](https://en.wikipedia.org/wiki/Unix_time)).
 
 	### ⚠️ Note that this implementation will try to guess the precision of the unix timestamp, dividing by 1000 each time (Discarding the included precision!) it thinks it's at least three orders of magnitude too large, this approach proved good enough to me over the usage of equivalent implementation in `tcrutils`.
@@ -41,10 +41,21 @@ class UnixTimestampInt(_Int):
 		return dt.datetime.fromtimestamp(self_int_copy, tz=tz)
 
 	def __nya_fmt__(self, *, fmt: Formatter) -> Text:
-		return fmt(self.to_datetime())
+		dt = self.to_datetime()
+
+		unix_timestamp_int = int(dt.timestamp())
+
+		return Text().join((
+			fmt._fh__raw_in_parens(fmt(dt)),
+			fmt._fh__dot(),
+			fmt._fh__identifier_function("timestamp"),
+			fmt._fh__call(),
+			Text(" -> ", style=fmt.styles.punctuation),
+			fmt(self.upcast_to_int()),
+		))
 
 
-class HexInt(_Int):
+class HexInt(_IntWithAlteredFormatting):
 	leading_zeroes: int
 	prefix: str
 

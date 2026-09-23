@@ -553,13 +553,12 @@ ignore = [
 	"D105", # document magic methods, like __str__, this is just stupid. Why add a "Return a string representation of X"??? this is entirely obvious...
 	"D107", # document every public __init__. This is too much.
 	"TC003", # not moving to type checking block if im going to use it a second
+	"SIM108", # if-else-block-instead-of-if-exp                  |   makes stuff less readable# 	"ANN401", # any-type                                         |   Dynamically typed expressions (typing.Any) are disallowed
 ]
 
 # ignore = [
-# 	# "COM812",  # missing-trailing-comma                           | So ruff fmt shuts up
-# 	# "COM812",  # single-line-implicit-string-concatenation        | So ruff fmt shuts up
-
-# 	"ANN401", # any-type                                         |   Dynamically typed expressions (typing.Any) are disallowed
+# "COM812",  # missing-trailing-comma                           | So ruff fmt shuts up
+# "COM812",  # single-line-implicit-string-concatenation        | So ruff fmt shuts up
 # 	"DTZ001", # call-datetime-without-tzinfo                     |   The use of datetime.datetime() without tzinfo argument is not allowed
 # 	"DTZ005", # call-datetime-now-without-tzinfo                 |   The use of datetime.datetime.now() without tzinfo argument is not allowed
 # 	"RUF012", # mutable-class-default                            |   Class utils no longer work so it's on the ignore list
@@ -589,7 +588,6 @@ ignore = [
 # 	"PIE804", # unnecessary-dict-kwargs                          |   sometimes useful
 # 	"RUF013", # implicit-optional                                |   that's dumb
 # 	"SIM105", # suppressible-exception                           |   obnoxious
-# 	"SIM108", # if-else-block-instead-of-if-exp                  |   makes stuff less readable
 # 	"UP032", # f-string                                         |   sometimes .format() is useful
 # 	"UP031", # Use format specifiers instead of percent format  |   sometimes % is useful
 # 	"SIM117", # multiple-with-statements                         |   more readable the old way
