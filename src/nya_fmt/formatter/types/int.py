@@ -19,13 +19,13 @@ class _IntWithAlteredFormatting(int):
 class UnixTimestampInt(_IntWithAlteredFormatting):
 	"""Display this int like a datetime.datetime object when formatting (interpret the value as a [unix timestamp](https://en.wikipedia.org/wiki/Unix_time)).
 
-	### ⚠️ Note that this implementation will try to guess the precision of the unix timestamp, dividing by 1000 each time (Discarding the included precision!) it thinks it's at least three orders of magnitude too large, this approach proved good enough to me over the usage of equivalent implementation in `tcrutils`.
+	### ⚠️ Note that this implementation during display will try to guess the precision of the unix timestamp, dividing by 1000 each time (Discarding the included precision!) when it thinks it's at least three orders of magnitude too large, this approach proved good enough to me over the usage of equivalent implementation in `tcrutils`.
 	"""
 
 	def to_datetime(self, *, tz: dt.tzinfo | None = dt.UTC) -> dt.datetime:
 		"""Evaluate this unix timestamp into a datetime.datetime object.
 
-		### ⚠️ Note that this implementation will try to guess the precision of the unix timestamp, dividing by 1000 each time (Discarding the included precision!) it thinks it's at least three orders of magnitude too large, this approach proved good enough to me over the usage of equivalent implementation in `tcrutils`.
+		### ⚠️ Note that this implementation during display will try to guess the precision of the unix timestamp, dividing by 1000 each time (Discarding the included precision!) when it thinks it's at least three orders of magnitude too large, this approach proved good enough to me over the usage of equivalent implementation in `tcrutils`.
 
 		Args:
 			tz (dt.tzinfo | None): The timezone to use for the datetime.datetime object. Pass None if you want to explicitly make a naive datetime.datetime object.
