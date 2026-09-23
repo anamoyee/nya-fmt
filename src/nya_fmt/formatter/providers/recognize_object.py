@@ -11,7 +11,7 @@ class _FPABCRecognize(FPABC, no_auto_register=True):
 	@abc.abstractmethod
 	def accept(self, v: object) -> bool: ...
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not self.accept(v):
 			return Maybe.new_none()
 

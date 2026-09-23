@@ -23,7 +23,7 @@ from . import _util
 from ._base import FormatProviderABC as FPABC
 
 if TYPE_CHECKING:
-	from .._base import Formatter
+	from .._base import Fmt
 
 try:
 	import hikari.internal.enums
@@ -34,7 +34,7 @@ else:
 
 
 class FP__builtins__bool(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, bool):
 			return Maybe.new_none()
 
@@ -47,7 +47,7 @@ class FP__builtins__bool(FPABC):
 
 
 class FP__builtins__None(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if v is not None:
 			return Maybe.new_none()
 
@@ -60,7 +60,7 @@ class FP__builtins__None(FPABC):
 
 
 class FP__builtins__int(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, int):
 			return Maybe.new_none()
 
@@ -75,7 +75,7 @@ class FP__builtins__int(FPABC):
 
 
 class FP__builtins__float(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, float):
 			return Maybe.new_none()
 
@@ -100,7 +100,7 @@ class FP__builtins__float(FPABC):
 class FP__pathlib__PurePath(
 	FPABC
 ):  # todo: Make it look like `eza` colored formatting (e.g. aqua for dirs, red for broken symlinks, maybe reuse same color for non existent paths, or maybe use gray for nonexistent idk, etc.)
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, PurePath):
 			return Maybe.new_none()
 
@@ -114,9 +114,9 @@ class FP__pathlib__PurePath(
 
 class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 	@abc.abstractmethod
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]: ...
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]: ...
 
-	def comma(self, *, fmt: Formatter) -> Text:
+	def comma(self, *, fmt: Fmt) -> Text:
 		return fmt._fh__comma()
 
 	@property
@@ -142,7 +142,7 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 		else:
 			return True
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not self.accept(v):
 			return Maybe.new_none()
 
@@ -211,7 +211,7 @@ class _FPABC__collections__Iterable(FPABC, no_auto_register=True):
 
 
 class _FPABC__collections__Mapping(_FPABC__collections__Iterable, no_auto_register=True):
-	def colon(self, *, fmt: Formatter) -> Text:
+	def colon(self, *, fmt: Fmt) -> Text:
 		return fmt._fh__colon()
 
 	@property
@@ -225,7 +225,7 @@ class _FPABC__collections__Mapping(_FPABC__collections__Iterable, no_auto_regist
 	@abc.abstractmethod
 	def accept(self, v: object) -> TypeGuard[Mapping[object, object]]: ...
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not self.accept(v):
 			return Maybe.new_none()
 
@@ -297,7 +297,7 @@ class FP__builtins__tuple(_FPABC__collections__Iterable):
 	def is_len1_comma_added(self) -> bool:
 		return True
 
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("(", style=fmt.styles.bracket),
 			Text(")", style=fmt.styles.bracket),
@@ -308,7 +308,7 @@ class FP__builtins__tuple(_FPABC__collections__Iterable):
 
 
 class FP__builtins__list(_FPABC__collections__Iterable):
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("[", style=fmt.styles.bracket),
 			Text("]", style=fmt.styles.bracket),
@@ -319,7 +319,7 @@ class FP__builtins__list(_FPABC__collections__Iterable):
 
 
 class FP__collections__Generator(_FPABC__collections__Iterable):
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("<", style=fmt.styles.bracket),
 			Text(">", style=fmt.styles.bracket),
@@ -338,7 +338,7 @@ class FP__collections__Generator(_FPABC__collections__Iterable):
 
 
 class FP__builtins__set(_FPABC__collections__Iterable):
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("{", style=fmt.styles.bracket),
 			Text("}", style=fmt.styles.bracket),
@@ -353,7 +353,7 @@ class FP__builtins__set(_FPABC__collections__Iterable):
 
 
 class FP__builtins__frozenset(_FPABC__collections__Iterable):
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("F", style=fmt.styles.letter_F_frozenset) + Text("{", style=fmt.styles.bracket),
 			Text("}", style=fmt.styles.bracket),
@@ -368,7 +368,7 @@ class FP__builtins__frozenset(_FPABC__collections__Iterable):
 
 
 class FP__collections__MutableMapping(_FPABC__collections__Mapping):
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("{", style=fmt.styles.bracket),
 			Text("}", style=fmt.styles.bracket),
@@ -379,7 +379,7 @@ class FP__collections__MutableMapping(_FPABC__collections__Mapping):
 
 
 class FP__collections__Mapping(_FPABC__collections__Mapping):
-	def brackets(self, *, fmt: Formatter) -> tuple[Text, Text]:
+	def brackets(self, *, fmt: Fmt) -> tuple[Text, Text]:
 		return (
 			Text("{", style=fmt.styles.bracket),
 			Text("}", style=fmt.styles.bracket),
@@ -390,7 +390,7 @@ class FP__collections__Mapping(_FPABC__collections__Mapping):
 
 
 class FP__builtins__type(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, type):
 			return Maybe.new_none()
 
@@ -405,7 +405,7 @@ class FP__builtins__type(FPABC):
 
 
 class FP__builtins__Ellipsis(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, EllipsisType):
 			return Maybe.new_none()
 
@@ -413,10 +413,10 @@ class FP__builtins__Ellipsis(FPABC):
 
 
 class FP__ast__expr_VIA_unparse(FPABC, no_auto_register=True):
-	def _format_ast_arguments_as_call(self, args: ast.arguments, *, fmt: Formatter) -> Text:
+	def _format_ast_arguments_as_call(self, args: ast.arguments, *, fmt: Fmt) -> Text:
 		return Text("<ast.argumments>")  # todo: impl
 
-	def _impl_comprehension_body(self, el: ast.expr | tuple[ast.expr, ast.expr], /, *generators: ast.comprehension, fmt: Formatter) -> Text:
+	def _impl_comprehension_body(self, el: ast.expr | tuple[ast.expr, ast.expr], /, *generators: ast.comprehension, fmt: Fmt) -> Text:
 		if isinstance(el, tuple):
 			el_k, el_v = el
 			fmted_el = fmt(el_k) + fmt._fh__colon() + fmt._fh__space() + fmt(el_v)
@@ -449,7 +449,7 @@ class FP__ast__expr_VIA_unparse(FPABC, no_auto_register=True):
 			),
 		))
 
-	def _impl(self, v: ast.expr, *, fmt: Formatter) -> Text:
+	def _impl(self, v: ast.expr, *, fmt: Fmt) -> Text:
 		match v:
 			case ast.Constant(value=value):
 				return fmt(value)
@@ -683,7 +683,7 @@ class FP__ast__expr_VIA_unparse(FPABC, no_auto_register=True):
 					e.add_note(f"{v=!r}")
 					raise
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, ast.expr):
 			return Maybe.new_none()
 
@@ -692,7 +692,7 @@ class FP__ast__expr_VIA_unparse(FPABC, no_auto_register=True):
 
 
 class FP__ast__expr_VIA_astpretty_into_unparse(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, ast.expr):
 			return Maybe.new_none()
 
@@ -724,14 +724,14 @@ class FP__builtins__object(FPABC, priority=-1000):
 		else:
 			return tree.body
 
-	def _make_name_text(self, v: object, *, fmt: Formatter) -> Text:
+	def _make_name_text(self, v: object, *, fmt: Fmt) -> Text:
 		text = fmt(v.__class__)
 
 		text.stylize_before(fmt.styles.none)
 
 		return text
 
-	def _make_x_object_at_y_text(self, *, ptr: int, fmt: Formatter) -> Text:
+	def _make_x_object_at_y_text(self, *, ptr: int, fmt: Fmt) -> Text:
 		from ..types import HexInt
 
 		if not fmt.include_memory_addresses_in_unknown_objects:
@@ -739,7 +739,7 @@ class FP__builtins__object(FPABC, priority=-1000):
 
 		return fmt._fh__call() + Text(" @", style=fmt.styles.punctuation) + fmt(HexInt(ptr))
 
-	def _make_call_text(self, v: object, *, fmt: Formatter) -> Text:
+	def _make_call_text(self, v: object, *, fmt: Fmt) -> Text:
 		repr_v = repr(v)
 
 		if match := re.fullmatch(r"<(?P<name>.+) object at (?P<ptr>0x[0-9a-fA-F]+)>", repr_v):
@@ -775,14 +775,14 @@ class FP__builtins__object(FPABC, priority=-1000):
 			),
 		))
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		return Maybe.new_some(
 			self._make_name_text(v, fmt=fmt) + self._make_call_text(v, fmt=fmt),
 		)
 
 
 class FP__types__FunctionType_VIA_module_path(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, FunctionType):
 			return Maybe.new_none()
 
@@ -801,7 +801,7 @@ class FP__types__FunctionType_VIA_module_path(FPABC):
 
 
 class FP__types__FunctionType_VIA_def(FPABC, no_auto_register=True):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, FunctionType):
 			return Maybe.new_none()
 
@@ -855,7 +855,7 @@ class FP__builtins__str(FPABC):
 	def repr(
 		v: str,
 		*,
-		fmt: Formatter,
+		fmt: Fmt,
 	) -> tuple[str, str, str]:
 		"""Return the quote character(or multi-character), content, and unquote character(or multi-character) of the string representation of `v`."""
 
@@ -913,7 +913,7 @@ class FP__builtins__str(FPABC):
 
 		return quote, content, unquote
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, str):
 			return Maybe.new_none()
 
@@ -969,7 +969,7 @@ class FP__builtins__str(FPABC):
 
 
 class FP__builtins__BaseException(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, BaseException):
 			return Maybe.new_none()
 
@@ -988,7 +988,7 @@ class FP__dataclasses__dataclass(FPABC):  # todo: implement attrs & attr in a si
 		# Check the rest of the items against the first type
 		return all(type(item) is first_type for item in iterator)
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not hasattr(v, "__dataclass_fields__"):
 			return Maybe.new_none()
 
@@ -1025,7 +1025,7 @@ class FP__dataclasses__dataclass(FPABC):  # todo: implement attrs & attr in a si
 
 
 class FP__types__ModuleType(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, ModuleType):
 			return Maybe.new_none()
 
@@ -1055,7 +1055,7 @@ class FP__types__ModuleType(FPABC):
 
 
 class FP__typing__TypeAliasType(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, TypeAliasType):
 			return Maybe.new_none()
 
@@ -1077,7 +1077,7 @@ class FP__datetime__date(FPABC):
 	def is_elapsed(v: dt.date) -> bool:
 		return v < dt.datetime.now(tz=dt.UTC).date()
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, dt.date):
 			return Maybe.new_none()
 
@@ -1114,7 +1114,7 @@ class FP__datetime__time(FPABC):
 
 		return v_seconds < (now_seconds - 1)
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, dt.time):
 			return Maybe.new_none()
 
@@ -1139,7 +1139,7 @@ class FP__datetime__datetime(FPABC):
 		# add tolerance of 1 second
 		return v < (dt.datetime.now(tz=v.tzinfo) - dt.timedelta(seconds=1))
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, dt.datetime):
 			return Maybe.new_none()
 
@@ -1159,7 +1159,7 @@ class FP__datetime__datetime(FPABC):
 
 
 class FP__builtins__slice(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not isinstance(v, slice):
 			return Maybe.new_none()
 
@@ -1218,7 +1218,7 @@ class FP__builtins__slice(FPABC):
 
 
 class FP__enum__Enum(FPABC, priority=10):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not (
 			(
 				hikari_available
@@ -1295,7 +1295,7 @@ class FP__enum__typeof_Enum(FPABC, priority=10):
 			or FP__enum__typeof_Enum.has_geometric_progression(v_t, start=1)
 		)
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not (
 			(
 				hikari_available

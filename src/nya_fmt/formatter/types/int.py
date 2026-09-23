@@ -3,7 +3,7 @@ from typing import Any
 
 from rich.text import Text
 
-from .._base import Formatter
+from .._base import Fmt
 
 
 class _IntWithAlteredFormatting(int):
@@ -40,7 +40,7 @@ class UnixTimestampInt(_IntWithAlteredFormatting):
 
 		return dt.datetime.fromtimestamp(self_int_copy, tz=tz)
 
-	def __nya_fmt__(self, *, fmt: Formatter) -> Text:
+	def __nya_fmt__(self, *, fmt: Fmt) -> Text:
 		dt = self.to_datetime()
 
 		unix_timestamp_int = int(dt.timestamp())
@@ -85,7 +85,7 @@ class HexInt(_IntWithAlteredFormatting):
 
 		return self
 
-	def __nya_fmt__(self, *, fmt: Formatter) -> Text:
+	def __nya_fmt__(self, *, fmt: Fmt) -> Text:
 		text = Text(self.as_hex())
 
 		text.highlight_regex(r"[0-9a-fA-F]+", fmt.styles.number)

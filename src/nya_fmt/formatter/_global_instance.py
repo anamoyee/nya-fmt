@@ -1,3 +1,3 @@
-from ._base import Formatter
+from ._base import Fmt
 
-fmt = Formatter()
+fmt = Fmt()

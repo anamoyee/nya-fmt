@@ -7,11 +7,11 @@ from rich.text import Span, Text
 from ._base import FormatProviderABC as FPABC
 
 if TYPE_CHECKING:
-	from .._base import Formatter
+	from .._base import Fmt
 
 
 class FP__rich__style__Style(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: "Formatter") -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: "Fmt") -> Maybe[Text]:
 		if not isinstance(v, rich.style.Style):
 			return Maybe.new_none()
 
@@ -52,7 +52,7 @@ class FP__rich__style__Style(FPABC):
 
 
 class FP__rich__text__Text(FPABC):
-	def make_preview_section(self, v: Text, /, *, fmt: "Formatter") -> Text:
+	def make_preview_section(self, v: Text, /, *, fmt: "Fmt") -> Text:
 		if fmt.rich_text_preview_max_len >= 0:
 			preview = v[: fmt.rich_text_preview_max_len]
 			if len(v) > fmt.rich_text_preview_max_len:
@@ -62,14 +62,14 @@ class FP__rich__text__Text(FPABC):
 
 		return fmt._fh__raw_in_angles(preview)
 
-	def make_call_section(self, v: Text, /, *, fmt: "Formatter") -> Text:
+	def make_call_section(self, v: Text, /, *, fmt: "Fmt") -> Text:
 		return fmt._fh__call(
 			v.plain,
 			style=v.style,
 			spans=v.spans,
 		)
 
-	def try_fmt(self, v: object, /, *, fmt: "Formatter") -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: "Fmt") -> Maybe[Text]:
 		if not isinstance(v, Text):
 			return Maybe.new_none()
 
@@ -83,7 +83,7 @@ class FP__rich__text__Text(FPABC):
 
 
 class FP__rich__text__Span(FPABC, priority=1):
-	def try_fmt(self, v: object, /, *, fmt: "Formatter") -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: "Fmt") -> Maybe[Text]:
 		if not isinstance(v, Span):
 			return Maybe.new_none()
 

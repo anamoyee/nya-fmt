@@ -54,7 +54,7 @@ class Styles:
 
 
 @dataclass(kw_only=True)
-class Formatter:
+class Fmt:
 	styles: Styles = field(default_factory=Styles)
 
 	indent: str | None = " " * 4

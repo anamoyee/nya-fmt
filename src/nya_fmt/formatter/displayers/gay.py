@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from rich.text import Text
 
 if TYPE_CHECKING:
-	from .._base import Formatter
+	from .._base import Fmt
 
 
 @dataclass
@@ -26,7 +26,7 @@ class DisplayAsGay:
 		),
 	)
 
-	def __nya_fmt__(self, fmt: "Formatter") -> Text:
+	def __nya_fmt__(self, fmt: "Fmt") -> Text:
 		return Text().join(
 			Text(char, style=f"b {style_str}")
 			for char, style_str in zip(

@@ -10,16 +10,16 @@ from rich.text import Text
 from ._base import FormatProviderABC as FPABC
 
 if TYPE_CHECKING:
-	from .._base import Formatter
+	from .._base import Fmt
 
 
 class NyaFmtMethodKwargs(TypedDict):
-	fmt: Formatter
+	fmt: Fmt
 
 
 @runtime_checkable
 class NyaFmtTypingProtocol(Protocol):
-	def __nya_fmt__(self, *, fmt: Formatter) -> Text: ...
+	def __nya_fmt__(self, *, fmt: Fmt) -> Text: ...
 
 
 class NyaFmtFP(FPABC, priority=100):
@@ -29,7 +29,7 @@ class NyaFmtFP(FPABC, priority=100):
 	def __init__(self) -> None:
 		self._ignored_ids: set[int] = set()
 
-	def _make_exception_occured_text(self, *, fmt: Formatter, v: NyaFmtTypingProtocol, e: BaseException) -> Text:
+	def _make_exception_occured_text(self, *, fmt: Fmt, v: NyaFmtTypingProtocol, e: BaseException) -> Text:
 		if fmt.debug_raise_exceptions:
 			e.add_note("Raising the exception as part of `Formatter.debug_raise_exceptions`.")
 			raise e
@@ -65,7 +65,7 @@ class NyaFmtFP(FPABC, priority=100):
 			))
 		)
 
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		if not hasattr(self, "_ignored_ids"):
 			self._ignored_ids = set()
 

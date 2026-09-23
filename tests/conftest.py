@@ -61,8 +61,8 @@ def _AUTOUSE_remove_last_dot():
 
 
 @pytest.fixture
-def fmt() -> nf.Formatter:
-	return nf.Formatter(
+def fmt() -> nf.Fmt:
+	return nf.Fmt(
 		debug_raise_exceptions=True,
 	)
 
@@ -73,14 +73,14 @@ class π_t:
 	Name comes from previous version of the library where the formatter was called print_iterable (and was often shortened to π in code due to it's long name).
 	"""
 
-	fmt: nf.Formatter
+	fmt: nf.Fmt
 
 	align: str
 	"""The `str` format specifier, the `str(THIS)` of `π[THIS] = ...` or `π <<= THIS`, used for alignment purposes."""
 	sep: str
 	"""The separator between key and value in `π[KEY] = VALUE`, or `π <<= KEY = VALUE`. Defaults to `"="`."""
 
-	def __init__(self, fmt: nf.Formatter) -> None:
+	def __init__(self, fmt: nf.Fmt) -> None:
 		self.fmt = fmt
 		self.align = ""
 		self.sep = "="
@@ -175,7 +175,7 @@ class π_t:
 
 
 @pytest.fixture
-def π(fmt: nf.Formatter) -> π_t:
+def π(fmt: nf.Fmt) -> π_t:
 	return π_t(fmt)
 
 

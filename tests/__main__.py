@@ -99,8 +99,8 @@ def main():
 			continue
 
 		if True:  # manually invoke the fixture functions to get π, assume they are per-function always
-			get_fmt: Callable[[], nf.Formatter] = fmt_fixture._get_wrapped_function()
-			get_π: Callable[[nf.Formatter], π_t] = π_fixture._get_wrapped_function()
+			get_fmt: Callable[[], nf.Fmt] = fmt_fixture._get_wrapped_function()
+			get_π: Callable[[nf.Fmt], π_t] = π_fixture._get_wrapped_function()
 
 			π = get_π(get_fmt())
 

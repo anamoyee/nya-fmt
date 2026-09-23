@@ -11,7 +11,7 @@ from ._base import FormatProviderABC as FPABC
 if TYPE_CHECKING:
 	import pydantic
 
-	from ._base import Formatter
+	from ._base import Fmt
 
 
 def apply_len1_multiline_dict_recursively(v: dict[object, object], /) -> displayers_m.Len1MultilineDict:
@@ -22,7 +22,7 @@ def apply_len1_multiline_dict_recursively(v: dict[object, object], /) -> display
 
 
 class FP__pydantic__BaseModel_VIA_dict(FPABC, no_auto_register=True):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		try:
 			import pydantic
 		except ImportError:
@@ -51,7 +51,7 @@ def _UNSAFE_cast_to_model_fields(v) -> dict[str, pydantic.fields.FieldInfo]:  # 
 
 
 class FP__pydantic__BaseModel_VIA_dict_resolved(FPABC):
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]:
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]:
 		try:
 			import pydantic
 		except ImportError:

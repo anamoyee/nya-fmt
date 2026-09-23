@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 	from nya_result import Maybe
 	from rich.text import Text
 
-	from .._base import Formatter
+	from .._base import Fmt
 
 
 class FormatProviderABC(abc.ABC):
@@ -32,4 +32,4 @@ class FormatProviderABC(abc.ABC):
 			cls._default_providers.setdefault(priority, []).insert(0, cls)
 
 	@abc.abstractmethod
-	def try_fmt(self, v: object, /, *, fmt: Formatter) -> Maybe[Text]: ...
+	def try_fmt(self, v: object, /, *, fmt: Fmt) -> Maybe[Text]: ...
